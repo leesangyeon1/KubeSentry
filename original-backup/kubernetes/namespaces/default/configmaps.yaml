@@ -1,0 +1,409 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  data:
+    isolation_controller.py: "#!/usr/bin/env python3\n\"\"\"\nKubeSentry Isolation
+      Controller - Production Ready\nMonitors Tetragon events and automatically isolates
+      suspicious pods\n\"\"\"\n\nimport json\nimport time\nimport os\nfrom datetime
+      import datetime, timedelta\nfrom kubernetes import client, config\nimport requests\nimport
+      threading\nfrom collections import defaultdict\nimport sys\n\n# Configuration\nTETRAGON_NAMESPACE
+      = \"kubesentry\"\nISOLATION_LABEL = \"security.kubesentry.io/isolated\"\nTHREAT_THRESHOLD
+      = int(os.getenv(\"THREAT_THRESHOLD\", \"3\"))\nTHREAT_WINDOW_SECONDS = int(os.getenv(\"THREAT_WINDOW_SECONDS\",
+      \"300\"))  # 5 minutes\nISOLATION_DURATION_HOURS = int(os.getenv(\"ISOLATION_DURATION_HOURS\",
+      \"24\"))\nSLACK_WEBHOOK = os.getenv(\"SLACK_WEBHOOK\", \"\")\n\n# Initialize
+      Kubernetes client\ntry:\n    config.load_incluster_config()\nexcept config.ConfigException:\n
+      \   try:\n        config.load_kube_config()\n    except Exception as e:\n        print(f\"Failed
+      to load Kubernetes config: {e}\", file=sys.stderr)\n        sys.exit(1)\n\nv1
+      = client.CoreV1Api()\nnetworking_v1 = client.NetworkingV1Api()\n\n# Thread-safe
+      threat tracking\nthreat_events = defaultdict(list)\nthreat_lock = threading.Lock()\n\ndef
+      log(message, level=\"INFO\"):\n    \"\"\"Thread-safe logging\"\"\"\n    timestamp
+      = datetime.utcnow().isoformat() + \"Z\"\n    print(f\"[{timestamp}] [{level}]
+      {message}\", flush=True)\n\ndef record_threat(key, threat_info):\n    \"\"\"Record
+      threat with timestamp and check threshold\"\"\"\n    now = datetime.utcnow()\n
+      \   cutoff = now - timedelta(seconds=THREAT_WINDOW_SECONDS)\n    \n    with
+      threat_lock:\n        # Remove old events outside time window\n        threat_events[key]
+      = [\n            event for event in threat_events[key] \n            if event['timestamp']
+      > cutoff\n        ]\n        \n        # Add new event\n        threat_events[key].append({\n
+      \           'timestamp': now,\n            'info': threat_info\n        })\n
+      \       \n        count = len(threat_events[key])\n        should_isolate =
+      count >= THREAT_THRESHOLD\n        \n        return should_isolate, count\n\ndef
+      parse_event(line):\n    \"\"\"Parse Tetragon JSON event\"\"\"\n    try:\n        event
+      = json.loads(line)\n        if not isinstance(event, dict):\n            return
+      None\n        return event\n    except (json.JSONDecodeError, ValueError):\n
+      \       return None\n\ndef is_suspicious_event(event):\n    \"\"\"Enhanced threat
+      detection\"\"\"\n    if not event:\n        return False, None\n    \n    #
+      Handle both process_exec and process_kprobe events\n    process = None\n    function
+      = None\n    \n    if \"process_kprobe\" in event:\n        kprobe = event[\"process_kprobe\"]\n
+      \       function = kprobe.get(\"function_name\", \"\")\n        process = kprobe.get(\"process\",
+      {})\n    elif \"process_exec\" in event:\n        exec_event = event[\"process_exec\"]\n
+      \       process = exec_event.get(\"process\", {})\n        function = \"process_exec\"\n
+      \   else:\n        return False, None\n    \n    if not process:\n        return
+      False, None\n    \n    # Extract pod information\n    pod_info = process.get(\"pod\",
+      {})\n    if not pod_info:\n        return False, None\n    \n    pod_name =
+      pod_info.get(\"name\")\n    namespace = pod_info.get(\"namespace\", \"default\")\n
+      \   \n    if not pod_name:\n        return False, None\n    \n    binary = process.get(\"binary\",
+      \"\")\n    \n    # Pattern 1: RAW Socket Creation\n    if \"process_kprobe\"
+      in event and function == \"__sock_create\":\n        args = event[\"process_kprobe\"].get(\"args\",
+      [])\n        for arg in args:\n            if arg.get(\"int_arg\") == 3:  #
+      SOCK_RAW\n                return True, {\n                    \"pod\": pod_name,\n
+      \                   \"namespace\": namespace,\n                    \"reason\":
+      \"RAW_SOCKET_CREATION\",\n                    \"binary\": binary,\n                    \"function\":
+      function\n                }\n    \n    # Pattern 2: Suspicious Execution Paths\n
+      \   suspicious_paths = [\"/tmp/\", \"/dev/shm/\", \"/var/tmp/\", \"/proc/self/\"]\n
+      \   if any(binary.startswith(path) for path in suspicious_paths):\n        return
+      True, {\n            \"pod\": pod_name,\n            \"namespace\": namespace,\n
+      \           \"reason\": \"SUSPICIOUS_BINARY_PATH\",\n            \"binary\":
+      binary,\n            \"function\": function\n        }\n    \n    # Pattern
+      3: Known Malware Binaries\n    malware_names = [\"bpfdoor\", \"xmrig\", \"kinsing\"]\n
+      \   if any(malware in binary.lower() for malware in malware_names):\n        return
+      True, {\n            \"pod\": pod_name,\n            \"namespace\": namespace,\n
+      \           \"reason\": \"KNOWN_MALWARE_BINARY\",\n            \"binary\": binary,\n
+      \           \"function\": function\n        }\n    \n    return False, None\n\ndef
+      isolate_pod(pod_name, namespace, reason):\n    \"\"\"Apply isolation with error
+      handling\"\"\"\n    log(f\"ISOLATING: {namespace}/{pod_name} - {reason}\", \"CRITICAL\")\n
+      \   \n    try:\n        # Check if pod exists and not already isolated\n        pod
+      = v1.read_namespaced_pod(name=pod_name, namespace=namespace)\n        \n        if
+      pod.metadata.labels and pod.metadata.labels.get(ISOLATION_LABEL) == \"true\":\n
+      \           log(f\"Pod {namespace}/{pod_name} already isolated\", \"INFO\")\n
+      \           return True\n        \n        # Label the pod for isolation\n        isolation_time
+      = datetime.utcnow()\n        expiry_time = isolation_time + timedelta(hours=ISOLATION_DURATION_HOURS)\n
+      \       \n        label_reason = reason[:63].replace(\"_\", \"-\").lower()\n
+      \       \n        body = {\n            \"metadata\": {\n                \"labels\":
+      {\n                    ISOLATION_LABEL: \"true\",\n                    \"security.kubesentry.io/reason\":
+      label_reason,\n                    \"security.kubesentry.io/isolated-at\": str(int(isolation_time.timestamp()))\n
+      \               },\n                \"annotations\": {\n                    \"security.kubesentry.io/expiry\":
+      expiry_time.isoformat(),\n                    \"security.kubesentry.io/full-reason\":
+      reason\n                }\n            }\n        }\n        \n        v1.patch_namespaced_pod(name=pod_name,
+      namespace=namespace, body=body)\n        log(f\"Pod labeled: {namespace}/{pod_name}\",
+      \"INFO\")\n        \n        # Create NetworkPolicy\n        create_network_policy(namespace)\n
+      \       \n        # Send notifications\n        send_slack_alert(pod_name, namespace,
+      reason, expiry_time)\n        \n        return True\n        \n    except client.exceptions.ApiException
+      as e:\n        if e.status == 404:\n            log(f\"Pod {namespace}/{pod_name}
+      not found\", \"WARNING\")\n        else:\n            log(f\"API error: {e}\",
+      \"ERROR\")\n        return False\n    except Exception as e:\n        log(f\"Error
+      isolating pod: {e}\", \"ERROR\")\n        return False\n\ndef create_network_policy(namespace):\n
+      \   \"\"\"Create Kubernetes NetworkPolicy\"\"\"\n    policy_name = \"kubesentry-isolation\"\n
+      \   \n    policy = client.V1NetworkPolicy(\n        api_version=\"networking.k8s.io/v1\",\n
+      \       kind=\"NetworkPolicy\",\n        metadata=client.V1ObjectMeta(\n            name=policy_name,\n
+      \           namespace=namespace\n        ),\n        spec=client.V1NetworkPolicySpec(\n
+      \           pod_selector=client.V1LabelSelector(\n                match_labels={ISOLATION_LABEL:
+      \"true\"}\n            ),\n            policy_types=[\"Ingress\", \"Egress\"],\n
+      \           ingress=[],  # Block all ingress\n            egress=[\n                #
+      Allow DNS only\n                client.V1NetworkPolicyEgressRule(\n                    to=[\n
+      \                       client.V1NetworkPolicyPeer(\n                            namespace_selector=client.V1LabelSelector(\n
+      \                               match_labels={\"kubernetes.io/metadata.name\":
+      \"kube-system\"}\n                            )\n                        )\n
+      \                   ],\n                    ports=[\n                        client.V1NetworkPolicyPort(protocol=\"UDP\",
+      port=53),\n                        client.V1NetworkPolicyPort(protocol=\"TCP\",
+      port=53)\n                    ]\n                )\n            ]\n        )\n
+      \   )\n    \n    try:\n        networking_v1.read_namespaced_network_policy(\n
+      \           name=policy_name,\n            namespace=namespace\n        )\n
+      \       log(f\"NetworkPolicy exists in {namespace}\", \"DEBUG\")\n    except
+      client.exceptions.ApiException as e:\n        if e.status == 404:\n            networking_v1.create_namespaced_network_policy(\n
+      \               namespace=namespace,\n                body=policy\n            )\n
+      \           log(f\"Created NetworkPolicy in {namespace}\", \"INFO\")\n\ndef
+      send_slack_alert(pod_name, namespace, reason, expiry_time):\n    \"\"\"Send
+      Slack notification\"\"\"\n    if not SLACK_WEBHOOK:\n        return\n    \n
+      \   payload = {\n        \"text\": \"\U0001F6A8 *KubeSentry: Pod Isolated*\",\n
+      \       \"attachments\": [{\n            \"color\": \"danger\",\n            \"fields\":
+      [\n                {\"title\": \"Pod\", \"value\": f\"`{pod_name}`\", \"short\":
+      True},\n                {\"title\": \"Namespace\", \"value\": f\"`{namespace}`\",
+      \"short\": True},\n                {\"title\": \"Threat\", \"value\": reason,
+      \"short\": False},\n                {\"title\": \"Action\", \"value\": \"Network
+      isolated (DNS only)\", \"short\": True},\n                {\"title\": \"Expires\",
+      \"value\": expiry_time.strftime(\"%Y-%m-%d %H:%M UTC\"), \"short\": True}\n
+      \           ],\n            \"footer\": \"KubeSentry\",\n            \"ts\":
+      int(time.time())\n        }]\n    }\n    \n    try:\n        requests.post(SLACK_WEBHOOK,
+      json=payload, timeout=5)\n        log(\"Slack alert sent\", \"INFO\")\n    except
+      Exception as e:\n        log(f\"Slack failed: {e}\", \"WARNING\")\n\ndef monitor_tetragon_logs():\n
+      \   \"\"\"Main monitoring loop\"\"\"\n    log(\"Starting Tetragon monitor\",
+      \"INFO\")\n    \n    while True:\n        try:\n            pods = v1.list_namespaced_pod(\n
+      \               namespace=TETRAGON_NAMESPACE,\n                label_selector=\"app.kubernetes.io/name=tetragon\"\n
+      \           ).items\n            \n            if not pods:\n                log(\"No
+      Tetragon pods found\", \"WARNING\")\n                time.sleep(30)\n                continue\n
+      \           \n            pod_name = pods[0].metadata.name\n            log(f\"Monitoring:
+      {pod_name}\", \"INFO\")\n            \n            stream = v1.read_namespaced_pod_log(\n
+      \               name=pod_name,\n                namespace=TETRAGON_NAMESPACE,\n
+      \               container=\"tetragon\",\n                follow=True,\n                _preload_content=False,\n
+      \               timestamps=False\n            )\n            \n            for
+      line in stream:\n                try:\n                    decoded = line.decode('utf-8').strip()\n
+      \                   if not decoded:\n                        continue\n                    \n
+      \                   event = parse_event(decoded)\n                    is_threat,
+      threat_info = is_suspicious_event(event)\n                    \n                    if
+      is_threat and threat_info:\n                        key = f\"{threat_info['namespace']}/{threat_info['pod']}\"\n
+      \                       should_isolate, count = record_threat(key, threat_info)\n
+      \                       \n                        log(\n                            f\"Threat
+      detected: {key} | {threat_info['reason']} | \"\n                            f\"Count:
+      {count}/{THREAT_THRESHOLD}\",\n                            \"WARNING\"\n                        )\n
+      \                       \n                        if should_isolate:\n                            isolate_pod(\n
+      \                               threat_info['pod'],\n                                threat_info['namespace'],\n
+      \                               threat_info['reason']\n                            )\n
+      \                           # Clear events after isolation\n                            with
+      threat_lock:\n                                threat_events[key] = []\n                \n
+      \               except Exception as e:\n                    log(f\"Event processing
+      error: {e}\", \"ERROR\")\n                    continue\n            \n            log(\"Stream
+      ended, reconnecting...\", \"WARNING\")\n            time.sleep(5)\n            \n
+      \       except Exception as e:\n            log(f\"Monitor error: {e}\", \"ERROR\")\n
+      \           time.sleep(30)\n\ndef cleanup_expired_isolations():\n    \"\"\"Remove
+      isolation from expired pods\"\"\"\n    log(\"Starting cleanup thread\", \"INFO\")\n
+      \   \n    while True:\n        try:\n            time.sleep(3600)  # Check every
+      hour\n            \n            all_pods = v1.list_pod_for_all_namespaces(\n
+      \               label_selector=f\"{ISOLATION_LABEL}=true\"\n            ).items\n
+      \           \n            now = datetime.utcnow()\n            \n            for
+      pod in all_pods:\n                annotations = pod.metadata.annotations or
+      {}\n                expiry_str = annotations.get(\"security.kubesentry.io/expiry\")\n
+      \               \n                if not expiry_str:\n                    continue\n
+      \               \n                try:\n                    expiry = datetime.fromisoformat(expiry_str.replace('Z',
+      '+00:00'))\n                    if now > expiry.replace(tzinfo=None):\n                        log(f\"Removing
+      expired isolation: {pod.metadata.namespace}/{pod.metadata.name}\", \"INFO\")\n
+      \                       \n                        v1.patch_namespaced_pod(\n
+      \                           name=pod.metadata.name,\n                            namespace=pod.metadata.namespace,\n
+      \                           body={\n                                \"metadata\":
+      {\n                                    \"labels\": {\n                                        ISOLATION_LABEL:
+      None,\n                                        \"security.kubesentry.io/reason\":
+      None,\n                                        \"security.kubesentry.io/isolated-at\":
+      None\n                                    }\n                                }\n
+      \                           }\n                        )\n                except
+      Exception as e:\n                    log(f\"Cleanup error for {pod.metadata.name}:
+      {e}\", \"ERROR\")\n                    \n        except Exception as e:\n            log(f\"Cleanup
+      thread error: {e}\", \"ERROR\")\n\ndef main():\n    log(\"KubeSentry Isolation
+      Controller starting\", \"INFO\")\n    log(f\"Config: THRESHOLD={THREAT_THRESHOLD},
+      WINDOW={THREAT_WINDOW_SECONDS}s, DURATION={ISOLATION_DURATION_HOURS}h\", \"INFO\")\n
+      \   \n    # Start cleanup thread\n    cleanup_thread = threading.Thread(target=cleanup_expired_isolations,
+      daemon=True)\n    cleanup_thread.start()\n    \n    # Start monitoring\n    monitor_tetragon_logs()\n\nif
+      __name__ == \"__main__\":\n    main()\n"
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: "{\"apiVersion\":\"v1\",\"data\":{\"isolation_controller.py\":\"#!/usr/bin/env
+        python3\\n\\\"\\\"\\\"\\nKubeSentry Isolation Controller - Production Ready\\nMonitors
+        Tetragon events and automatically isolates suspicious pods\\n\\\"\\\"\\\"\\n\\nimport
+        json\\nimport time\\nimport os\\nfrom datetime import datetime, timedelta\\nfrom
+        kubernetes import client, config\\nimport requests\\nimport threading\\nfrom
+        collections import defaultdict\\nimport sys\\n\\n# Configuration\\nTETRAGON_NAMESPACE
+        = \\\"kubesentry\\\"\\nISOLATION_LABEL = \\\"security.kubesentry.io/isolated\\\"\\nTHREAT_THRESHOLD
+        = int(os.getenv(\\\"THREAT_THRESHOLD\\\", \\\"3\\\"))\\nTHREAT_WINDOW_SECONDS
+        = int(os.getenv(\\\"THREAT_WINDOW_SECONDS\\\", \\\"300\\\"))  # 5 minutes\\nISOLATION_DURATION_HOURS
+        = int(os.getenv(\\\"ISOLATION_DURATION_HOURS\\\", \\\"24\\\"))\\nSLACK_WEBHOOK
+        = os.getenv(\\\"SLACK_WEBHOOK\\\", \\\"\\\")\\n\\n# Initialize Kubernetes
+        client\\ntry:\\n    config.load_incluster_config()\\nexcept config.ConfigException:\\n
+        \   try:\\n        config.load_kube_config()\\n    except Exception as e:\\n
+        \       print(f\\\"Failed to load Kubernetes config: {e}\\\", file=sys.stderr)\\n
+        \       sys.exit(1)\\n\\nv1 = client.CoreV1Api()\\nnetworking_v1 = client.NetworkingV1Api()\\n\\n#
+        Thread-safe threat tracking\\nthreat_events = defaultdict(list)\\nthreat_lock
+        = threading.Lock()\\n\\ndef log(message, level=\\\"INFO\\\"):\\n    \\\"\\\"\\\"Thread-safe
+        logging\\\"\\\"\\\"\\n    timestamp = datetime.utcnow().isoformat() + \\\"Z\\\"\\n
+        \   print(f\\\"[{timestamp}] [{level}] {message}\\\", flush=True)\\n\\ndef
+        record_threat(key, threat_info):\\n    \\\"\\\"\\\"Record threat with timestamp
+        and check threshold\\\"\\\"\\\"\\n    now = datetime.utcnow()\\n    cutoff
+        = now - timedelta(seconds=THREAT_WINDOW_SECONDS)\\n    \\n    with threat_lock:\\n
+        \       # Remove old events outside time window\\n        threat_events[key]
+        = [\\n            event for event in threat_events[key] \\n            if
+        event['timestamp'] \\u003e cutoff\\n        ]\\n        \\n        # Add new
+        event\\n        threat_events[key].append({\\n            'timestamp': now,\\n
+        \           'info': threat_info\\n        })\\n        \\n        count =
+        len(threat_events[key])\\n        should_isolate = count \\u003e= THREAT_THRESHOLD\\n
+        \       \\n        return should_isolate, count\\n\\ndef parse_event(line):\\n
+        \   \\\"\\\"\\\"Parse Tetragon JSON event\\\"\\\"\\\"\\n    try:\\n        event
+        = json.loads(line)\\n        if not isinstance(event, dict):\\n            return
+        None\\n        return event\\n    except (json.JSONDecodeError, ValueError):\\n
+        \       return None\\n\\ndef is_suspicious_event(event):\\n    \\\"\\\"\\\"Enhanced
+        threat detection\\\"\\\"\\\"\\n    if not event:\\n        return False, None\\n
+        \   \\n    # Handle both process_exec and process_kprobe events\\n    process
+        = None\\n    function = None\\n    \\n    if \\\"process_kprobe\\\" in event:\\n
+        \       kprobe = event[\\\"process_kprobe\\\"]\\n        function = kprobe.get(\\\"function_name\\\",
+        \\\"\\\")\\n        process = kprobe.get(\\\"process\\\", {})\\n    elif \\\"process_exec\\\"
+        in event:\\n        exec_event = event[\\\"process_exec\\\"]\\n        process
+        = exec_event.get(\\\"process\\\", {})\\n        function = \\\"process_exec\\\"\\n
+        \   else:\\n        return False, None\\n    \\n    if not process:\\n        return
+        False, None\\n    \\n    # Extract pod information\\n    pod_info = process.get(\\\"pod\\\",
+        {})\\n    if not pod_info:\\n        return False, None\\n    \\n    pod_name
+        = pod_info.get(\\\"name\\\")\\n    namespace = pod_info.get(\\\"namespace\\\",
+        \\\"default\\\")\\n    \\n    if not pod_name:\\n        return False, None\\n
+        \   \\n    binary = process.get(\\\"binary\\\", \\\"\\\")\\n    \\n    # Pattern
+        1: RAW Socket Creation\\n    if \\\"process_kprobe\\\" in event and function
+        == \\\"__sock_create\\\":\\n        args = event[\\\"process_kprobe\\\"].get(\\\"args\\\",
+        [])\\n        for arg in args:\\n            if arg.get(\\\"int_arg\\\") ==
+        3:  # SOCK_RAW\\n                return True, {\\n                    \\\"pod\\\":
+        pod_name,\\n                    \\\"namespace\\\": namespace,\\n                    \\\"reason\\\":
+        \\\"RAW_SOCKET_CREATION\\\",\\n                    \\\"binary\\\": binary,\\n
+        \                   \\\"function\\\": function\\n                }\\n    \\n
+        \   # Pattern 2: Suspicious Execution Paths\\n    suspicious_paths = [\\\"/tmp/\\\",
+        \\\"/dev/shm/\\\", \\\"/var/tmp/\\\", \\\"/proc/self/\\\"]\\n    if any(binary.startswith(path)
+        for path in suspicious_paths):\\n        return True, {\\n            \\\"pod\\\":
+        pod_name,\\n            \\\"namespace\\\": namespace,\\n            \\\"reason\\\":
+        \\\"SUSPICIOUS_BINARY_PATH\\\",\\n            \\\"binary\\\": binary,\\n            \\\"function\\\":
+        function\\n        }\\n    \\n    # Pattern 3: Known Malware Binaries\\n    malware_names
+        = [\\\"bpfdoor\\\", \\\"xmrig\\\", \\\"kinsing\\\"]\\n    if any(malware in
+        binary.lower() for malware in malware_names):\\n        return True, {\\n
+        \           \\\"pod\\\": pod_name,\\n            \\\"namespace\\\": namespace,\\n
+        \           \\\"reason\\\": \\\"KNOWN_MALWARE_BINARY\\\",\\n            \\\"binary\\\":
+        binary,\\n            \\\"function\\\": function\\n        }\\n    \\n    return
+        False, None\\n\\ndef isolate_pod(pod_name, namespace, reason):\\n    \\\"\\\"\\\"Apply
+        isolation with error handling\\\"\\\"\\\"\\n    log(f\\\"ISOLATING: {namespace}/{pod_name}
+        - {reason}\\\", \\\"CRITICAL\\\")\\n    \\n    try:\\n        # Check if pod
+        exists and not already isolated\\n        pod = v1.read_namespaced_pod(name=pod_name,
+        namespace=namespace)\\n        \\n        if pod.metadata.labels and pod.metadata.labels.get(ISOLATION_LABEL)
+        == \\\"true\\\":\\n            log(f\\\"Pod {namespace}/{pod_name} already
+        isolated\\\", \\\"INFO\\\")\\n            return True\\n        \\n        #
+        Label the pod for isolation\\n        isolation_time = datetime.utcnow()\\n
+        \       expiry_time = isolation_time + timedelta(hours=ISOLATION_DURATION_HOURS)\\n
+        \       \\n        label_reason = reason[:63].replace(\\\"_\\\", \\\"-\\\").lower()\\n
+        \       \\n        body = {\\n            \\\"metadata\\\": {\\n                \\\"labels\\\":
+        {\\n                    ISOLATION_LABEL: \\\"true\\\",\\n                    \\\"security.kubesentry.io/reason\\\":
+        label_reason,\\n                    \\\"security.kubesentry.io/isolated-at\\\":
+        str(int(isolation_time.timestamp()))\\n                },\\n                \\\"annotations\\\":
+        {\\n                    \\\"security.kubesentry.io/expiry\\\": expiry_time.isoformat(),\\n
+        \                   \\\"security.kubesentry.io/full-reason\\\": reason\\n
+        \               }\\n            }\\n        }\\n        \\n        v1.patch_namespaced_pod(name=pod_name,
+        namespace=namespace, body=body)\\n        log(f\\\"Pod labeled: {namespace}/{pod_name}\\\",
+        \\\"INFO\\\")\\n        \\n        # Create NetworkPolicy\\n        create_network_policy(namespace)\\n
+        \       \\n        # Send notifications\\n        send_slack_alert(pod_name,
+        namespace, reason, expiry_time)\\n        \\n        return True\\n        \\n
+        \   except client.exceptions.ApiException as e:\\n        if e.status == 404:\\n
+        \           log(f\\\"Pod {namespace}/{pod_name} not found\\\", \\\"WARNING\\\")\\n
+        \       else:\\n            log(f\\\"API error: {e}\\\", \\\"ERROR\\\")\\n
+        \       return False\\n    except Exception as e:\\n        log(f\\\"Error
+        isolating pod: {e}\\\", \\\"ERROR\\\")\\n        return False\\n\\ndef create_network_policy(namespace):\\n
+        \   \\\"\\\"\\\"Create Kubernetes NetworkPolicy\\\"\\\"\\\"\\n    policy_name
+        = \\\"kubesentry-isolation\\\"\\n    \\n    policy = client.V1NetworkPolicy(\\n
+        \       api_version=\\\"networking.k8s.io/v1\\\",\\n        kind=\\\"NetworkPolicy\\\",\\n
+        \       metadata=client.V1ObjectMeta(\\n            name=policy_name,\\n            namespace=namespace\\n
+        \       ),\\n        spec=client.V1NetworkPolicySpec(\\n            pod_selector=client.V1LabelSelector(\\n
+        \               match_labels={ISOLATION_LABEL: \\\"true\\\"}\\n            ),\\n
+        \           policy_types=[\\\"Ingress\\\", \\\"Egress\\\"],\\n            ingress=[],
+        \ # Block all ingress\\n            egress=[\\n                # Allow DNS
+        only\\n                client.V1NetworkPolicyEgressRule(\\n                    to=[\\n
+        \                       client.V1NetworkPolicyPeer(\\n                            namespace_selector=client.V1LabelSelector(\\n
+        \                               match_labels={\\\"kubernetes.io/metadata.name\\\":
+        \\\"kube-system\\\"}\\n                            )\\n                        )\\n
+        \                   ],\\n                    ports=[\\n                        client.V1NetworkPolicyPort(protocol=\\\"UDP\\\",
+        port=53),\\n                        client.V1NetworkPolicyPort(protocol=\\\"TCP\\\",
+        port=53)\\n                    ]\\n                )\\n            ]\\n        )\\n
+        \   )\\n    \\n    try:\\n        networking_v1.read_namespaced_network_policy(\\n
+        \           name=policy_name,\\n            namespace=namespace\\n        )\\n
+        \       log(f\\\"NetworkPolicy exists in {namespace}\\\", \\\"DEBUG\\\")\\n
+        \   except client.exceptions.ApiException as e:\\n        if e.status == 404:\\n
+        \           networking_v1.create_namespaced_network_policy(\\n                namespace=namespace,\\n
+        \               body=policy\\n            )\\n            log(f\\\"Created
+        NetworkPolicy in {namespace}\\\", \\\"INFO\\\")\\n\\ndef send_slack_alert(pod_name,
+        namespace, reason, expiry_time):\\n    \\\"\\\"\\\"Send Slack notification\\\"\\\"\\\"\\n
+        \   if not SLACK_WEBHOOK:\\n        return\\n    \\n    payload = {\\n        \\\"text\\\":
+        \\\"\U0001F6A8 *KubeSentry: Pod Isolated*\\\",\\n        \\\"attachments\\\":
+        [{\\n            \\\"color\\\": \\\"danger\\\",\\n            \\\"fields\\\":
+        [\\n                {\\\"title\\\": \\\"Pod\\\", \\\"value\\\": f\\\"`{pod_name}`\\\",
+        \\\"short\\\": True},\\n                {\\\"title\\\": \\\"Namespace\\\",
+        \\\"value\\\": f\\\"`{namespace}`\\\", \\\"short\\\": True},\\n                {\\\"title\\\":
+        \\\"Threat\\\", \\\"value\\\": reason, \\\"short\\\": False},\\n                {\\\"title\\\":
+        \\\"Action\\\", \\\"value\\\": \\\"Network isolated (DNS only)\\\", \\\"short\\\":
+        True},\\n                {\\\"title\\\": \\\"Expires\\\", \\\"value\\\": expiry_time.strftime(\\\"%Y-%m-%d
+        %H:%M UTC\\\"), \\\"short\\\": True}\\n            ],\\n            \\\"footer\\\":
+        \\\"KubeSentry\\\",\\n            \\\"ts\\\": int(time.time())\\n        }]\\n
+        \   }\\n    \\n    try:\\n        requests.post(SLACK_WEBHOOK, json=payload,
+        timeout=5)\\n        log(\\\"Slack alert sent\\\", \\\"INFO\\\")\\n    except
+        Exception as e:\\n        log(f\\\"Slack failed: {e}\\\", \\\"WARNING\\\")\\n\\ndef
+        monitor_tetragon_logs():\\n    \\\"\\\"\\\"Main monitoring loop\\\"\\\"\\\"\\n
+        \   log(\\\"Starting Tetragon monitor\\\", \\\"INFO\\\")\\n    \\n    while
+        True:\\n        try:\\n            pods = v1.list_namespaced_pod(\\n                namespace=TETRAGON_NAMESPACE,\\n
+        \               label_selector=\\\"app.kubernetes.io/name=tetragon\\\"\\n
+        \           ).items\\n            \\n            if not pods:\\n                log(\\\"No
+        Tetragon pods found\\\", \\\"WARNING\\\")\\n                time.sleep(30)\\n
+        \               continue\\n            \\n            pod_name = pods[0].metadata.name\\n
+        \           log(f\\\"Monitoring: {pod_name}\\\", \\\"INFO\\\")\\n            \\n
+        \           stream = v1.read_namespaced_pod_log(\\n                name=pod_name,\\n
+        \               namespace=TETRAGON_NAMESPACE,\\n                container=\\\"tetragon\\\",\\n
+        \               follow=True,\\n                _preload_content=False,\\n
+        \               timestamps=False\\n            )\\n            \\n            for
+        line in stream:\\n                try:\\n                    decoded = line.decode('utf-8').strip()\\n
+        \                   if not decoded:\\n                        continue\\n
+        \                   \\n                    event = parse_event(decoded)\\n
+        \                   is_threat, threat_info = is_suspicious_event(event)\\n
+        \                   \\n                    if is_threat and threat_info:\\n
+        \                       key = f\\\"{threat_info['namespace']}/{threat_info['pod']}\\\"\\n
+        \                       should_isolate, count = record_threat(key, threat_info)\\n
+        \                       \\n                        log(\\n                            f\\\"Threat
+        detected: {key} | {threat_info['reason']} | \\\"\\n                            f\\\"Count:
+        {count}/{THREAT_THRESHOLD}\\\",\\n                            \\\"WARNING\\\"\\n
+        \                       )\\n                        \\n                        if
+        should_isolate:\\n                            isolate_pod(\\n                                threat_info['pod'],\\n
+        \                               threat_info['namespace'],\\n                                threat_info['reason']\\n
+        \                           )\\n                            # Clear events
+        after isolation\\n                            with threat_lock:\\n                                threat_events[key]
+        = []\\n                \\n                except Exception as e:\\n                    log(f\\\"Event
+        processing error: {e}\\\", \\\"ERROR\\\")\\n                    continue\\n
+        \           \\n            log(\\\"Stream ended, reconnecting...\\\", \\\"WARNING\\\")\\n
+        \           time.sleep(5)\\n            \\n        except Exception as e:\\n
+        \           log(f\\\"Monitor error: {e}\\\", \\\"ERROR\\\")\\n            time.sleep(30)\\n\\ndef
+        cleanup_expired_isolations():\\n    \\\"\\\"\\\"Remove isolation from expired
+        pods\\\"\\\"\\\"\\n    log(\\\"Starting cleanup thread\\\", \\\"INFO\\\")\\n
+        \   \\n    while True:\\n        try:\\n            time.sleep(3600)  # Check
+        every hour\\n            \\n            all_pods = v1.list_pod_for_all_namespaces(\\n
+        \               label_selector=f\\\"{ISOLATION_LABEL}=true\\\"\\n            ).items\\n
+        \           \\n            now = datetime.utcnow()\\n            \\n            for
+        pod in all_pods:\\n                annotations = pod.metadata.annotations
+        or {}\\n                expiry_str = annotations.get(\\\"security.kubesentry.io/expiry\\\")\\n
+        \               \\n                if not expiry_str:\\n                    continue\\n
+        \               \\n                try:\\n                    expiry = datetime.fromisoformat(expiry_str.replace('Z',
+        '+00:00'))\\n                    if now \\u003e expiry.replace(tzinfo=None):\\n
+        \                       log(f\\\"Removing expired isolation: {pod.metadata.namespace}/{pod.metadata.name}\\\",
+        \\\"INFO\\\")\\n                        \\n                        v1.patch_namespaced_pod(\\n
+        \                           name=pod.metadata.name,\\n                            namespace=pod.metadata.namespace,\\n
+        \                           body={\\n                                \\\"metadata\\\":
+        {\\n                                    \\\"labels\\\": {\\n                                        ISOLATION_LABEL:
+        None,\\n                                        \\\"security.kubesentry.io/reason\\\":
+        None,\\n                                        \\\"security.kubesentry.io/isolated-at\\\":
+        None\\n                                    }\\n                                }\\n
+        \                           }\\n                        )\\n                except
+        Exception as e:\\n                    log(f\\\"Cleanup error for {pod.metadata.name}:
+        {e}\\\", \\\"ERROR\\\")\\n                    \\n        except Exception
+        as e:\\n            log(f\\\"Cleanup thread error: {e}\\\", \\\"ERROR\\\")\\n\\ndef
+        main():\\n    log(\\\"KubeSentry Isolation Controller starting\\\", \\\"INFO\\\")\\n
+        \   log(f\\\"Config: THRESHOLD={THREAT_THRESHOLD}, WINDOW={THREAT_WINDOW_SECONDS}s,
+        DURATION={ISOLATION_DURATION_HOURS}h\\\", \\\"INFO\\\")\\n    \\n    # Start
+        cleanup thread\\n    cleanup_thread = threading.Thread(target=cleanup_expired_isolations,
+        daemon=True)\\n    cleanup_thread.start()\\n    \\n    # Start monitoring\\n
+        \   monitor_tetragon_logs()\\n\\nif __name__ == \\\"__main__\\\":\\n    main()\\n\"},\"kind\":\"ConfigMap\",\"metadata\":{\"annotations\":{},\"name\":\"controller-script\",\"namespace\":\"default\"}}\n"
+    creationTimestamp: "2025-11-28T02:42:02Z"
+    name: controller-script
+    namespace: default
+    resourceVersion: "1131470"
+    uid: 5ee29537-7bb3-4e61-b8ec-79fb0b37a19f
+- apiVersion: v1
+  data:
+    ca.crt: |
+      -----BEGIN CERTIFICATE-----
+      MIIDijCCAnKgAwIBAgIRALRtj79TNjFFx0YagrMa3zowDQYJKoZIhvcNAQELBQAw
+      TzELMAkGA1UEBhMCVVMxFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xEzARBgNVBAoT
+      Ckt1YmVybmV0ZXMxEzARBgNVBAMTCkt1YmVybmV0ZXMwHhcNMjUxMTIzMDMxNDAy
+      WhcNMzAxMTIzMDMxNDAyWjBPMQswCQYDVQQGEwJVUzEWMBQGA1UEBxMNU2FuIEZy
+      YW5jaXNjbzETMBEGA1UEChMKS3ViZXJuZXRlczETMBEGA1UEAxMKS3ViZXJuZXRl
+      czCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKJsj6eW6VALs2GrfbVC
+      La8sICp62CahYNC8oruHQi97RUi/zFj7g7FzAGYCqUlGcBvrYNpeVx4VeK2pqkiC
+      bPSikUlRJZJRy5+fwGXKYnESNJ94PofH51/C0+7RBlPWYYFZJ+G3/aHv0/tFynOW
+      aOxG9wuCDx+UbWuVHQC/z7ZrTRmdMGTIsCrKFmju7wYJvXF7tQ8h+Y6sOLa73Pcu
+      Inj69rpag8d0dVUvJCXVwV7ZHAiJWswhW2xjUG44e5k8rrArf2PJ6VHCtVMuk7y7
+      A4O/H4hrUQRwhzqH3BBpAdo62cU3x60Xnq1NgZcv9bc3C3jKVEXuUmwzWD3Y8QMN
+      iAkCAwEAAaNhMF8wDgYDVR0PAQH/BAQDAgKEMB0GA1UdJQQWMBQGCCsGAQUFBwMC
+      BggrBgEFBQcDATAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBSnCTgjU/yRNEPe
+      F4MmjTLw+iBCMDANBgkqhkiG9w0BAQsFAAOCAQEAYYpo9YW879yXtCISayqOmZof
+      xTkRsyVG6DwkV0omA7usC6gYgdUKDc8WDnYfvxqHZEKjcYRoZdmzrCqJ7TSNotzM
+      qwOlP6s/SCdkD6qBb/GyvLg5aMju1h3MG2/OwaO7+hfTd+rNVS1UVaXX20MjlR0o
+      Wv0XehMYQ00YF1R+61O1dDgigoYaPsK4ecjFc23F407WCo7V5VJkewx1Je7CcDnH
+      eiaAoB8bd0pPXhzZbB+7FPtRu687r0zdz+vJuumyH61Cf9v0h6fDmO0B2SEJ3e+c
+      8QK8NvykPS36Pbsc9tJYm51VF2N9ZvODSejotouVFw8SAUE7p4t2t5jHCcFWLw==
+      -----END CERTIFICATE-----
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubernetes.io/description: Contains a CA bundle that can be used to verify the
+        kube-apiserver when using internal endpoints such as the internal service
+        IP or kubernetes.default.svc. No other usage is guaranteed across distributions
+        of Kubernetes clusters.
+    creationTimestamp: "2025-11-23T03:14:59Z"
+    name: kube-root-ca.crt
+    namespace: default
+    resourceVersion: "375"
+    uid: 24be0eda-d5af-42f3-9d50-8ca52db85a5f
+kind: List
+metadata:
+  resourceVersion: ""

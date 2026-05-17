@@ -1,0 +1,208 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  data:
+    calico_backend: bird
+    cni_network_config: |-
+      {
+        "name": "k8s-pod-network",
+        "cniVersion": "0.3.1",
+        "plugins": [
+          {
+            "type": "calico",
+            "log_level": "info",
+            "log_file_path": "/var/log/calico/cni/cni.log",
+            "datastore_type": "kubernetes",
+            "nodename": "__KUBERNETES_NODE_NAME__",
+            "nodename_file_optional": true,
+            "mtu": __CNI_MTU__,
+            "ipam": {
+                "type": "calico-ipam",
+                "assign_ipv4": "true",
+                "assign_ipv6": "true"
+            },
+            "policy": {
+                "type": "k8s"
+            },
+            "kubernetes": {
+                "kubeconfig": "__KUBECONFIG_FILEPATH__"
+            }
+          },
+          {
+            "type": "portmap",
+            "snat": true,
+            "capabilities": {"portMappings": true}
+          }
+        ]
+      }
+    typha_service_name: none
+    veth_mtu: "0"
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: "2025-11-23T03:15:03Z"
+    name: calico-config
+    namespace: kube-system
+    resourceVersion: "429"
+    uid: c87eb7dd-4322-4d7e-b845-03946c0eb3ff
+- apiVersion: v1
+  data:
+    status: |
+      time: 2025-11-23 03:15:39.996884127 +0000 UTC
+      autoscalerStatus: Initializing
+  kind: ConfigMap
+  metadata:
+    annotations:
+      cluster-autoscaler.kubernetes.io/last-updated: 2025-11-23 03:15:39.996884127
+        +0000 UTC
+    creationTimestamp: "2025-11-23T03:15:40Z"
+    name: cluster-autoscaler-status
+    namespace: kube-system
+    resourceVersion: "1098"
+    uid: 85c8c1cc-bbd6-432a-8160-f928dae24d40
+- apiVersion: v1
+  data:
+    Corefile: |
+      .:53 {
+          errors
+          health {
+            lameduck 5s
+          }
+          ready
+          kubernetes cluster.local in-addr.arpa ip6.arpa {
+            fallthrough in-addr.arpa ip6.arpa
+          }
+          prometheus :9153
+          forward . /etc/resolv.conf {
+            max_concurrent 1000
+          }
+          cache 1800
+          loop
+          reload
+          loadbalance
+      }
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: "2025-11-23T03:15:09Z"
+    name: coredns
+    namespace: kube-system
+    resourceVersion: "583"
+    uid: e18a22f4-3003-446f-b36d-926c6117c9d1
+- apiVersion: v1
+  data:
+    client-ca-file: |
+      -----BEGIN CERTIFICATE-----
+      MIIDijCCAnKgAwIBAgIRALRtj79TNjFFx0YagrMa3zowDQYJKoZIhvcNAQELBQAw
+      TzELMAkGA1UEBhMCVVMxFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xEzARBgNVBAoT
+      Ckt1YmVybmV0ZXMxEzARBgNVBAMTCkt1YmVybmV0ZXMwHhcNMjUxMTIzMDMxNDAy
+      WhcNMzAxMTIzMDMxNDAyWjBPMQswCQYDVQQGEwJVUzEWMBQGA1UEBxMNU2FuIEZy
+      YW5jaXNjbzETMBEGA1UEChMKS3ViZXJuZXRlczETMBEGA1UEAxMKS3ViZXJuZXRl
+      czCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKJsj6eW6VALs2GrfbVC
+      La8sICp62CahYNC8oruHQi97RUi/zFj7g7FzAGYCqUlGcBvrYNpeVx4VeK2pqkiC
+      bPSikUlRJZJRy5+fwGXKYnESNJ94PofH51/C0+7RBlPWYYFZJ+G3/aHv0/tFynOW
+      aOxG9wuCDx+UbWuVHQC/z7ZrTRmdMGTIsCrKFmju7wYJvXF7tQ8h+Y6sOLa73Pcu
+      Inj69rpag8d0dVUvJCXVwV7ZHAiJWswhW2xjUG44e5k8rrArf2PJ6VHCtVMuk7y7
+      A4O/H4hrUQRwhzqH3BBpAdo62cU3x60Xnq1NgZcv9bc3C3jKVEXuUmwzWD3Y8QMN
+      iAkCAwEAAaNhMF8wDgYDVR0PAQH/BAQDAgKEMB0GA1UdJQQWMBQGCCsGAQUFBwMC
+      BggrBgEFBQcDATAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBSnCTgjU/yRNEPe
+      F4MmjTLw+iBCMDANBgkqhkiG9w0BAQsFAAOCAQEAYYpo9YW879yXtCISayqOmZof
+      xTkRsyVG6DwkV0omA7usC6gYgdUKDc8WDnYfvxqHZEKjcYRoZdmzrCqJ7TSNotzM
+      qwOlP6s/SCdkD6qBb/GyvLg5aMju1h3MG2/OwaO7+hfTd+rNVS1UVaXX20MjlR0o
+      Wv0XehMYQ00YF1R+61O1dDgigoYaPsK4ecjFc23F407WCo7V5VJkewx1Je7CcDnH
+      eiaAoB8bd0pPXhzZbB+7FPtRu687r0zdz+vJuumyH61Cf9v0h6fDmO0B2SEJ3e+c
+      8QK8NvykPS36Pbsc9tJYm51VF2N9ZvODSejotouVFw8SAUE7p4t2t5jHCcFWLw==
+      -----END CERTIFICATE-----
+    requestheader-allowed-names: '["front-proxy-client"]'
+    requestheader-client-ca-file: |
+      -----BEGIN CERTIFICATE-----
+      MIIDwTCCAqmgAwIBAgIQOXjVkofA45CQrZW1sgYYMTANBgkqhkiG9w0BAQsFADBr
+      MQswCQYDVQQGEwJVUzEWMBQGA1UEBxMNU2FuIEZyYW5jaXNjbzEhMB8GA1UEChMY
+      S3ViZXJuZXRlcy1hcGktZXh0ZW5zaW9uMSEwHwYDVQQDExhLdWJlcm5ldGVzLWFw
+      aS1leHRlbnNpb24wHhcNMjUxMTIzMDMxNDAzWhcNMzAxMTIzMDMxNDAzWjBrMQsw
+      CQYDVQQGEwJVUzEWMBQGA1UEBxMNU2FuIEZyYW5jaXNjbzEhMB8GA1UEChMYS3Vi
+      ZXJuZXRlcy1hcGktZXh0ZW5zaW9uMSEwHwYDVQQDExhLdWJlcm5ldGVzLWFwaS1l
+      eHRlbnNpb24wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDA0dQNG8Ds
+      v+v7acl773kW1BSHfKsLD7icAcz7F1jRXTI/MI5cyeNZ9GDFH9NrVUk5A3f2fuy3
+      bRXhZM5+PNgVN2TyZFAojSutkShnW0xefccFQ+5BVbzTDiJ/WtMOdZj1wjIfZuzH
+      dh/ZbE4CWdjb/hZLwm5MJGvOfmEVSpP1CfYgXJTSIoA8gxiufc1bb89m2sR/Jr+4
+      e3HPlKOBdCu5pYyJzziLivC/7Jqmq6oQPwg/mxY4g0DqRPrtf0fW6J/XHdRlJd5t
+      r9cSgRmYTQObRXQK8fbO1JZnFh06fHrTfsoyQ2jAr54Bj174D+hogv8YC79liOIY
+      DgYiCO41ooAbAgMBAAGjYTBfMA4GA1UdDwEB/wQEAwIChDAdBgNVHSUEFjAUBggr
+      BgEFBQcDAgYIKwYBBQUHAwEwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUQoho
+      ISt+vRk6EX50pIQuIphRCPUwDQYJKoZIhvcNAQELBQADggEBAAb7srLsco+5RcjM
+      Gn+UoCLNCJNkJnH6D9dsqCseGhe4r9yC1lh0CFyvfD+kVt2g3c7kT3QnnG1PAp3H
+      s30edv0V7Fz7fXsAPo8J0IWNrW4K86gSqgqtLsguz/UlldoEBbr2tf6KM2wffBDr
+      w2M40f05gH5CMa/cO2ojei17CDbRSBEnh+p6kmo0UuVALb8qHT8CP4csGnM7gbc2
+      MybyzXB512Yqk6SW/V2VlL1jzj5OWUg8gEC1ebGezAHGX8yO8Hv7vSOJFf59iumc
+      m/gzwVDPtTSE01wKZyS/qQiRgMa6izqEQl8HFFQQqR5yOeIBcVPumQmQHux2Qv/Y
+      4CCXHLs=
+      -----END CERTIFICATE-----
+    requestheader-extra-headers-prefix: '["X-Remote-Extra-"]'
+    requestheader-group-headers: '["X-Remote-Group"]'
+    requestheader-username-headers: '["X-Remote-User"]'
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: "2025-11-23T03:14:47Z"
+    name: extension-apiserver-authentication
+    namespace: kube-system
+    resourceVersion: "25"
+    uid: efdee603-2224-4268-a541-d4ab37e73628
+- apiVersion: v1
+  data:
+    since: "2025-11-23"
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: "2025-11-23T03:14:47Z"
+    name: kube-apiserver-legacy-service-account-token-tracking
+    namespace: kube-system
+    resourceVersion: "68"
+    uid: 73d871e0-e800-4c76-a401-6464aa2628f0
+- apiVersion: v1
+  data:
+    ca.crt: |
+      -----BEGIN CERTIFICATE-----
+      MIIDijCCAnKgAwIBAgIRALRtj79TNjFFx0YagrMa3zowDQYJKoZIhvcNAQELBQAw
+      TzELMAkGA1UEBhMCVVMxFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xEzARBgNVBAoT
+      Ckt1YmVybmV0ZXMxEzARBgNVBAMTCkt1YmVybmV0ZXMwHhcNMjUxMTIzMDMxNDAy
+      WhcNMzAxMTIzMDMxNDAyWjBPMQswCQYDVQQGEwJVUzEWMBQGA1UEBxMNU2FuIEZy
+      YW5jaXNjbzETMBEGA1UEChMKS3ViZXJuZXRlczETMBEGA1UEAxMKS3ViZXJuZXRl
+      czCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKJsj6eW6VALs2GrfbVC
+      La8sICp62CahYNC8oruHQi97RUi/zFj7g7FzAGYCqUlGcBvrYNpeVx4VeK2pqkiC
+      bPSikUlRJZJRy5+fwGXKYnESNJ94PofH51/C0+7RBlPWYYFZJ+G3/aHv0/tFynOW
+      aOxG9wuCDx+UbWuVHQC/z7ZrTRmdMGTIsCrKFmju7wYJvXF7tQ8h+Y6sOLa73Pcu
+      Inj69rpag8d0dVUvJCXVwV7ZHAiJWswhW2xjUG44e5k8rrArf2PJ6VHCtVMuk7y7
+      A4O/H4hrUQRwhzqH3BBpAdo62cU3x60Xnq1NgZcv9bc3C3jKVEXuUmwzWD3Y8QMN
+      iAkCAwEAAaNhMF8wDgYDVR0PAQH/BAQDAgKEMB0GA1UdJQQWMBQGCCsGAQUFBwMC
+      BggrBgEFBQcDATAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBSnCTgjU/yRNEPe
+      F4MmjTLw+iBCMDANBgkqhkiG9w0BAQsFAAOCAQEAYYpo9YW879yXtCISayqOmZof
+      xTkRsyVG6DwkV0omA7usC6gYgdUKDc8WDnYfvxqHZEKjcYRoZdmzrCqJ7TSNotzM
+      qwOlP6s/SCdkD6qBb/GyvLg5aMju1h3MG2/OwaO7+hfTd+rNVS1UVaXX20MjlR0o
+      Wv0XehMYQ00YF1R+61O1dDgigoYaPsK4ecjFc23F407WCo7V5VJkewx1Je7CcDnH
+      eiaAoB8bd0pPXhzZbB+7FPtRu687r0zdz+vJuumyH61Cf9v0h6fDmO0B2SEJ3e+c
+      8QK8NvykPS36Pbsc9tJYm51VF2N9ZvODSejotouVFw8SAUE7p4t2t5jHCcFWLw==
+      -----END CERTIFICATE-----
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubernetes.io/description: Contains a CA bundle that can be used to verify the
+        kube-apiserver when using internal endpoints such as the internal service
+        IP or kubernetes.default.svc. No other usage is guaranteed across distributions
+        of Kubernetes clusters.
+    creationTimestamp: "2025-11-23T03:14:59Z"
+    name: kube-root-ca.crt
+    namespace: kube-system
+    resourceVersion: "378"
+    uid: c9cd6d42-621c-40de-b5a9-cb40325a5015
+- apiVersion: v1
+  data:
+    KUBERNETES_SERVICE_HOST: 10.3.96.3
+    KUBERNETES_SERVICE_PORT: "6443"
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: "2025-11-23T03:15:07Z"
+    name: kubernetes-services-endpoint
+    namespace: kube-system
+    resourceVersion: "569"
+    uid: bf9afeea-cc61-4979-8121-351ab4163eb9
+kind: List
+metadata:
+  resourceVersion: ""

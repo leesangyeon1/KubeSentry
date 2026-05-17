@@ -16,6 +16,14 @@ The report covers:
 - Monitoring/logging stack (Tetragon, Prometheus, Loki, Grafana)
 - Security handling notes for secrets and backup publication
 
+## Original Files Imported
+
+Original snapshot files requested from the hackathon backup are included under:
+
+- [`original-backup/`](original-backup/)
+
+This includes all exported Kubernetes YAML/JSON files and extracted original controller code.
+
 **Requirements** 
 
 - Kubernetes cluster (v1.24+)

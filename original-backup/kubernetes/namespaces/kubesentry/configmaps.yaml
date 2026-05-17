@@ -1,0 +1,127 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  data:
+    ca.crt: |
+      -----BEGIN CERTIFICATE-----
+      MIIDijCCAnKgAwIBAgIRALRtj79TNjFFx0YagrMa3zowDQYJKoZIhvcNAQELBQAw
+      TzELMAkGA1UEBhMCVVMxFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xEzARBgNVBAoT
+      Ckt1YmVybmV0ZXMxEzARBgNVBAMTCkt1YmVybmV0ZXMwHhcNMjUxMTIzMDMxNDAy
+      WhcNMzAxMTIzMDMxNDAyWjBPMQswCQYDVQQGEwJVUzEWMBQGA1UEBxMNU2FuIEZy
+      YW5jaXNjbzETMBEGA1UEChMKS3ViZXJuZXRlczETMBEGA1UEAxMKS3ViZXJuZXRl
+      czCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKJsj6eW6VALs2GrfbVC
+      La8sICp62CahYNC8oruHQi97RUi/zFj7g7FzAGYCqUlGcBvrYNpeVx4VeK2pqkiC
+      bPSikUlRJZJRy5+fwGXKYnESNJ94PofH51/C0+7RBlPWYYFZJ+G3/aHv0/tFynOW
+      aOxG9wuCDx+UbWuVHQC/z7ZrTRmdMGTIsCrKFmju7wYJvXF7tQ8h+Y6sOLa73Pcu
+      Inj69rpag8d0dVUvJCXVwV7ZHAiJWswhW2xjUG44e5k8rrArf2PJ6VHCtVMuk7y7
+      A4O/H4hrUQRwhzqH3BBpAdo62cU3x60Xnq1NgZcv9bc3C3jKVEXuUmwzWD3Y8QMN
+      iAkCAwEAAaNhMF8wDgYDVR0PAQH/BAQDAgKEMB0GA1UdJQQWMBQGCCsGAQUFBwMC
+      BggrBgEFBQcDATAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBSnCTgjU/yRNEPe
+      F4MmjTLw+iBCMDANBgkqhkiG9w0BAQsFAAOCAQEAYYpo9YW879yXtCISayqOmZof
+      xTkRsyVG6DwkV0omA7usC6gYgdUKDc8WDnYfvxqHZEKjcYRoZdmzrCqJ7TSNotzM
+      qwOlP6s/SCdkD6qBb/GyvLg5aMju1h3MG2/OwaO7+hfTd+rNVS1UVaXX20MjlR0o
+      Wv0XehMYQ00YF1R+61O1dDgigoYaPsK4ecjFc23F407WCo7V5VJkewx1Je7CcDnH
+      eiaAoB8bd0pPXhzZbB+7FPtRu687r0zdz+vJuumyH61Cf9v0h6fDmO0B2SEJ3e+c
+      8QK8NvykPS36Pbsc9tJYm51VF2N9ZvODSejotouVFw8SAUE7p4t2t5jHCcFWLw==
+      -----END CERTIFICATE-----
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubernetes.io/description: Contains a CA bundle that can be used to verify the
+        kube-apiserver when using internal endpoints such as the internal service
+        IP or kubernetes.default.svc. No other usage is guaranteed across distributions
+        of Kubernetes clusters.
+    creationTimestamp: "2025-11-23T04:34:45Z"
+    name: kube-root-ca.crt
+    namespace: kubesentry
+    resourceVersion: "13879"
+    uid: ca97b9d3-4868-4d1a-82d4-e0735db4fcfc
+- apiVersion: v1
+  data:
+    cluster-name: ""
+    debug: "false"
+    enable-ancestors: ""
+    enable-cgidmap: "false"
+    enable-cri: "false"
+    enable-k8s-api: "true"
+    enable-pod-annotations: "false"
+    enable-pod-info: "false"
+    enable-policy-filter: "true"
+    enable-process-cred: "true"
+    enable-process-ns: "true"
+    enable-tracing-policy-crd: "true"
+    event-cache-retries: "15"
+    event-cache-retry-delay: "2"
+    export-allowlist: '{"event_set":["PROCESS_EXEC", "PROCESS_EXIT", "PROCESS_KPROBE",
+      "PROCESS_UPROBE", "PROCESS_TRACEPOINT", "PROCESS_LSM"]}'
+    export-denylist: |-
+      {"health_check":true}
+      {"namespace":["", "cilium", "kube-system"]}
+    export-file-compress: "false"
+    export-file-max-backups: "5"
+    export-file-max-size-mb: "10"
+    export-file-perm: "600"
+    export-filename: /var/run/cilium/tetragon/tetragon.log
+    export-rate-limit: "-1"
+    field-filters: ""
+    gops-address: localhost:8118
+    health-server-address: :6789
+    health-server-interval: "10"
+    metrics-label-filter: namespace,workload,pod,binary
+    metrics-server: :2112
+    process-cache-gc-interval: 30s
+    process-cache-size: "65536"
+    procfs: /procRoot
+    redaction-filters: ""
+    server-address: localhost:54321
+    use-perf-ring-buffer: "false"
+  kind: ConfigMap
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: tetragon
+      meta.helm.sh/release-namespace: kubesentry
+    creationTimestamp: "2025-11-23T17:05:51Z"
+    labels:
+      app.kubernetes.io/component: agent
+      app.kubernetes.io/instance: tetragon
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: tetragon
+      app.kubernetes.io/part-of: tetragon
+      app.kubernetes.io/version: 1.6.0
+      helm.sh/chart: tetragon-1.6.0
+    name: tetragon-config
+    namespace: kubesentry
+    resourceVersion: "404124"
+    uid: ad3799a7-081c-4bd8-848a-a2721d884e63
+- apiVersion: v1
+  data:
+    force-update-crds: "false"
+    leader-election: "false"
+    leader-election-lease-duration: 15s
+    leader-election-namespace: ""
+    leader-election-renew-deadline: 5s
+    leader-election-retry-period: 2s
+    skip-crd-creation: "false"
+    skip-pod-info-crd: "true"
+    skip-tracing-policy-crd: "false"
+  kind: ConfigMap
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: tetragon
+      meta.helm.sh/release-namespace: kubesentry
+    creationTimestamp: "2025-11-23T17:05:51Z"
+    labels:
+      app.kubernetes.io/component: operator
+      app.kubernetes.io/instance: tetragon
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: tetragon-operator
+      app.kubernetes.io/part-of: tetragon
+      app.kubernetes.io/version: 1.6.0
+      helm.sh/chart: tetragon-1.6.0
+    name: tetragon-operator-config
+    namespace: kubesentry
+    resourceVersion: "131999"
+    uid: 77ab18e2-0b9a-4ef5-850b-f204791a4c93
+kind: List
+metadata:
+  resourceVersion: ""

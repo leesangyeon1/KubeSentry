@@ -1,0 +1,120 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  data:
+    ca.crt: |
+      -----BEGIN CERTIFICATE-----
+      MIIDijCCAnKgAwIBAgIRALRtj79TNjFFx0YagrMa3zowDQYJKoZIhvcNAQELBQAw
+      TzELMAkGA1UEBhMCVVMxFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xEzARBgNVBAoT
+      Ckt1YmVybmV0ZXMxEzARBgNVBAMTCkt1YmVybmV0ZXMwHhcNMjUxMTIzMDMxNDAy
+      WhcNMzAxMTIzMDMxNDAyWjBPMQswCQYDVQQGEwJVUzEWMBQGA1UEBxMNU2FuIEZy
+      YW5jaXNjbzETMBEGA1UEChMKS3ViZXJuZXRlczETMBEGA1UEAxMKS3ViZXJuZXRl
+      czCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKJsj6eW6VALs2GrfbVC
+      La8sICp62CahYNC8oruHQi97RUi/zFj7g7FzAGYCqUlGcBvrYNpeVx4VeK2pqkiC
+      bPSikUlRJZJRy5+fwGXKYnESNJ94PofH51/C0+7RBlPWYYFZJ+G3/aHv0/tFynOW
+      aOxG9wuCDx+UbWuVHQC/z7ZrTRmdMGTIsCrKFmju7wYJvXF7tQ8h+Y6sOLa73Pcu
+      Inj69rpag8d0dVUvJCXVwV7ZHAiJWswhW2xjUG44e5k8rrArf2PJ6VHCtVMuk7y7
+      A4O/H4hrUQRwhzqH3BBpAdo62cU3x60Xnq1NgZcv9bc3C3jKVEXuUmwzWD3Y8QMN
+      iAkCAwEAAaNhMF8wDgYDVR0PAQH/BAQDAgKEMB0GA1UdJQQWMBQGCCsGAQUFBwMC
+      BggrBgEFBQcDATAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBSnCTgjU/yRNEPe
+      F4MmjTLw+iBCMDANBgkqhkiG9w0BAQsFAAOCAQEAYYpo9YW879yXtCISayqOmZof
+      xTkRsyVG6DwkV0omA7usC6gYgdUKDc8WDnYfvxqHZEKjcYRoZdmzrCqJ7TSNotzM
+      qwOlP6s/SCdkD6qBb/GyvLg5aMju1h3MG2/OwaO7+hfTd+rNVS1UVaXX20MjlR0o
+      Wv0XehMYQ00YF1R+61O1dDgigoYaPsK4ecjFc23F407WCo7V5VJkewx1Je7CcDnH
+      eiaAoB8bd0pPXhzZbB+7FPtRu687r0zdz+vJuumyH61Cf9v0h6fDmO0B2SEJ3e+c
+      8QK8NvykPS36Pbsc9tJYm51VF2N9ZvODSejotouVFw8SAUE7p4t2t5jHCcFWLw==
+      -----END CERTIFICATE-----
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubernetes.io/description: Contains a CA bundle that can be used to verify the
+        kube-apiserver when using internal endpoints such as the internal service
+        IP or kubernetes.default.svc. No other usage is guaranteed across distributions
+        of Kubernetes clusters.
+    creationTimestamp: "2025-11-24T22:31:03Z"
+    name: kube-root-ca.crt
+    namespace: loki
+    resourceVersion: "412637"
+    uid: 983a0d5e-5de4-4b94-b212-b38c491c8ac4
+- apiVersion: v1
+  data:
+    loki-stack-datasource.yaml: |-
+      apiVersion: 1
+      datasources:
+      - name: Loki
+        type: loki
+        access: proxy
+        url: "http://loki-stack:3100"
+        version: 1
+        isDefault: true
+        jsonData:
+          {}
+  kind: ConfigMap
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: loki-stack
+      meta.helm.sh/release-namespace: loki
+    creationTimestamp: "2025-11-24T22:36:11Z"
+    labels:
+      app: loki-stack
+      app.kubernetes.io/managed-by: Helm
+      chart: loki-stack-2.10.3
+      grafana_datasource: "1"
+      heritage: Helm
+      release: loki-stack
+    name: loki-stack
+    namespace: loki
+    resourceVersion: "446829"
+    uid: 16436ab7-4327-4598-8082-d4fd242c8373
+- apiVersion: v1
+  data:
+    test.sh: |
+      #!/usr/bin/env bash
+
+      LOKI_URI="http://${LOKI_SERVICE}:${LOKI_PORT}"
+
+      function setup() {
+        apk add -u curl jq
+        until (curl -s ${LOKI_URI}/loki/api/v1/label/app/values | jq -e '.data[] | select(. == "loki")'); do
+          sleep 1
+        done
+      }
+
+      @test "Has labels" {
+        curl -s ${LOKI_URI}/loki/api/v1/labels | \
+        jq -e '.data[] | select(. == "app")'
+      }
+
+      @test "Query log entry" {
+        curl -sG ${LOKI_URI}/api/prom/query?limit=10 --data-urlencode 'query={app="loki"}' | \
+        jq -e '.streams[].entries | length >=1'
+      }
+
+      @test "Push log entry" {
+        local timestamp=$(date +%s000000000)
+        local data=$(jq -n --arg timestamp "${timestamp}" '{"streams": [{"stream": {"app": "loki-test"}, "values": [[$timestamp, "foobar"]]}]}')
+
+        curl -s -X POST -H "Content-Type: application/json" ${LOKI_URI}/loki/api/v1/push --data-raw "${data}"
+
+        curl -sG ${LOKI_URI}/loki/api/v1/query_range?limit=1 --data-urlencode 'query={app="loki-test"}' | \
+        jq -e '.data.result[].values[][1] == "foobar"'
+      }
+  kind: ConfigMap
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: loki-stack
+      meta.helm.sh/release-namespace: loki
+    creationTimestamp: "2025-11-24T22:36:11Z"
+    labels:
+      app: loki-stack
+      app.kubernetes.io/managed-by: Helm
+      chart: loki-stack-2.10.3
+      heritage: Helm
+      release: loki-stack
+    name: loki-stack-test
+    namespace: loki
+    resourceVersion: "413693"
+    uid: 2740fc5c-904b-41f1-910b-d252d840ef71
+kind: List
+metadata:
+  resourceVersion: ""

@@ -1,0 +1,32 @@
+apiVersion: v1
+items:
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: tetragon
+      meta.helm.sh/release-namespace: kubesentry
+    creationTimestamp: "2025-11-23T17:05:51Z"
+    labels:
+      app.kubernetes.io/component: agent
+      app.kubernetes.io/instance: tetragon
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: tetragon
+      app.kubernetes.io/part-of: tetragon
+      app.kubernetes.io/version: 1.6.0
+      helm.sh/chart: tetragon-1.6.0
+    name: tetragon
+    namespace: kubesentry
+    resourceVersion: "132005"
+    uid: 9005c506-603b-4aca-b7ee-af1934b76203
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: tetragon
+  subjects:
+  - kind: ServiceAccount
+    name: tetragon
+    namespace: kubesentry
+kind: List
+metadata:
+  resourceVersion: ""

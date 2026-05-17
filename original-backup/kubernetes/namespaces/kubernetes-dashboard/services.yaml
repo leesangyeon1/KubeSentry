@@ -1,0 +1,265 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"k8s-app":"dashboard-metrics-scraper"},"name":"dashboard-metrics-scraper","namespace":"kubernetes-dashboard"},"spec":{"ports":[{"port":8000,"targetPort":8000}],"selector":{"k8s-app":"dashboard-metrics-scraper"}}}
+    creationTimestamp: "2025-11-23T05:49:02Z"
+    labels:
+      k8s-app: dashboard-metrics-scraper
+    name: dashboard-metrics-scraper
+    namespace: kubernetes-dashboard
+    resourceVersion: "25569"
+    uid: e36925f1-ed3a-4943-938d-c7c74c5fd648
+  spec:
+    clusterIP: 10.97.118.116
+    clusterIPs:
+    - 10.97.118.116
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - port: 8000
+      protocol: TCP
+      targetPort: 8000
+    selector:
+      k8s-app: dashboard-metrics-scraper
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"k8s-app":"kubernetes-dashboard"},"name":"kubernetes-dashboard","namespace":"kubernetes-dashboard"},"spec":{"ports":[{"port":443,"targetPort":8443}],"selector":{"k8s-app":"kubernetes-dashboard"}}}
+    creationTimestamp: "2025-11-23T05:49:02Z"
+    labels:
+      k8s-app: kubernetes-dashboard
+    name: kubernetes-dashboard
+    namespace: kubernetes-dashboard
+    resourceVersion: "25555"
+    uid: 625b131f-d20e-417c-b98c-2a9ff7f56823
+  spec:
+    clusterIP: 10.97.240.22
+    clusterIPs:
+    - 10.97.240.22
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - port: 443
+      protocol: TCP
+      targetPort: 8443
+    selector:
+      k8s-app: kubernetes-dashboard
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: kubernetes-dashboard
+      meta.helm.sh/release-namespace: kubernetes-dashboard
+    creationTimestamp: "2025-11-23T03:57:15Z"
+    labels:
+      app.kubernetes.io/component: api
+      app.kubernetes.io/instance: kubernetes-dashboard
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: kubernetes-dashboard-api
+      app.kubernetes.io/part-of: kubernetes-dashboard
+      app.kubernetes.io/version: 1.14.0
+      helm.sh/chart: kubernetes-dashboard-7.14.0
+    name: kubernetes-dashboard-api
+    namespace: kubernetes-dashboard
+    resourceVersion: "25801"
+    uid: 3172b5ee-9515-48d9-b675-8fca1a50cb3a
+  spec:
+    clusterIP: 10.96.53.71
+    clusterIPs:
+    - 10.96.53.71
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: api
+      port: 8000
+      protocol: TCP
+      targetPort: 8000
+    selector:
+      app.kubernetes.io/instance: kubernetes-dashboard
+      app.kubernetes.io/name: kubernetes-dashboard-api
+      app.kubernetes.io/part-of: kubernetes-dashboard
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: kubernetes-dashboard
+      meta.helm.sh/release-namespace: kubernetes-dashboard
+    creationTimestamp: "2025-11-23T03:57:15Z"
+    labels:
+      app.kubernetes.io/component: auth
+      app.kubernetes.io/instance: kubernetes-dashboard
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: kubernetes-dashboard-auth
+      app.kubernetes.io/part-of: kubernetes-dashboard
+      app.kubernetes.io/version: 1.4.0
+      helm.sh/chart: kubernetes-dashboard-7.14.0
+    name: kubernetes-dashboard-auth
+    namespace: kubernetes-dashboard
+    resourceVersion: "25804"
+    uid: 7e8ef055-9ed9-4c3f-a97d-804293dd86f5
+  spec:
+    clusterIP: 10.105.107.219
+    clusterIPs:
+    - 10.105.107.219
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: auth
+      port: 8000
+      protocol: TCP
+      targetPort: 8000
+    selector:
+      app.kubernetes.io/instance: kubernetes-dashboard
+      app.kubernetes.io/name: kubernetes-dashboard-auth
+      app.kubernetes.io/part-of: kubernetes-dashboard
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: kubernetes-dashboard
+      meta.helm.sh/release-namespace: kubernetes-dashboard
+    creationTimestamp: "2025-11-23T03:57:15Z"
+    labels:
+      app.kubernetes.io/instance: kubernetes-dashboard
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: kong
+      app.kubernetes.io/version: "3.9"
+      enable-metrics: "true"
+      helm.sh/chart: kong-2.52.0
+    name: kubernetes-dashboard-kong-proxy
+    namespace: kubernetes-dashboard
+    resourceVersion: "25798"
+    uid: 6869144e-510c-4464-873a-df26bc52a965
+  spec:
+    clusterIP: 10.98.175.236
+    clusterIPs:
+    - 10.98.175.236
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: kong-proxy-tls
+      port: 443
+      protocol: TCP
+      targetPort: 8443
+    selector:
+      app.kubernetes.io/component: app
+      app.kubernetes.io/instance: kubernetes-dashboard
+      app.kubernetes.io/name: kong
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: kubernetes-dashboard
+      meta.helm.sh/release-namespace: kubernetes-dashboard
+    creationTimestamp: "2025-11-23T03:57:15Z"
+    labels:
+      app.kubernetes.io/component: metrics-scraper
+      app.kubernetes.io/instance: kubernetes-dashboard
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: kubernetes-dashboard-metrics-scraper
+      app.kubernetes.io/part-of: kubernetes-dashboard
+      app.kubernetes.io/version: 1.2.2
+      helm.sh/chart: kubernetes-dashboard-7.14.0
+    name: kubernetes-dashboard-metrics-scraper
+    namespace: kubernetes-dashboard
+    resourceVersion: "25807"
+    uid: c48c6815-6a45-4f94-9345-17667facf575
+  spec:
+    clusterIP: 10.102.89.10
+    clusterIPs:
+    - 10.102.89.10
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - port: 8000
+      protocol: TCP
+      targetPort: 8000
+    selector:
+      app.kubernetes.io/instance: kubernetes-dashboard
+      app.kubernetes.io/name: kubernetes-dashboard-metrics-scraper
+      app.kubernetes.io/part-of: kubernetes-dashboard
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: kubernetes-dashboard
+      meta.helm.sh/release-namespace: kubernetes-dashboard
+    creationTimestamp: "2025-11-23T03:57:15Z"
+    labels:
+      app.kubernetes.io/component: web
+      app.kubernetes.io/instance: kubernetes-dashboard
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: kubernetes-dashboard-web
+      app.kubernetes.io/part-of: kubernetes-dashboard
+      app.kubernetes.io/version: 1.7.0
+      helm.sh/chart: kubernetes-dashboard-7.14.0
+    name: kubernetes-dashboard-web
+    namespace: kubernetes-dashboard
+    resourceVersion: "25810"
+    uid: bc0cd5b7-602a-49dc-a17b-b1bd3df50241
+  spec:
+    clusterIP: 10.98.154.37
+    clusterIPs:
+    - 10.98.154.37
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: web
+      port: 8000
+      protocol: TCP
+      targetPort: 8000
+    selector:
+      app.kubernetes.io/instance: kubernetes-dashboard
+      app.kubernetes.io/name: kubernetes-dashboard-web
+      app.kubernetes.io/part-of: kubernetes-dashboard
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+kind: List
+metadata:
+  resourceVersion: ""

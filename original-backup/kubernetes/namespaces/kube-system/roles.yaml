@@ -1,0 +1,230 @@
+apiVersion: v1
+items:
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    creationTimestamp: "2025-11-23T03:15:16Z"
+    labels:
+      k8s-addon: cluster-autoscaler.addons.k8s.io
+      k8s-app: cluster-autoscaler
+    name: cluster-autoscaler
+    namespace: kube-system
+    resourceVersion: "832"
+    uid: 3c491ee2-de1d-4a5d-a875-56214b3ad7e3
+  rules:
+  - apiGroups:
+    - ""
+    resources:
+    - configmaps
+    verbs:
+    - create
+    - list
+    - watch
+  - apiGroups:
+    - ""
+    resourceNames:
+    - cluster-autoscaler-status
+    - cluster-autoscaler-priority-expander
+    resources:
+    - configmaps
+    verbs:
+    - delete
+    - get
+    - update
+    - watch
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    annotations:
+      rbac.authorization.kubernetes.io/autoupdate: "true"
+    creationTimestamp: "2025-11-23T03:14:48Z"
+    labels:
+      kubernetes.io/bootstrapping: rbac-defaults
+    name: extension-apiserver-authentication-reader
+    namespace: kube-system
+    resourceVersion: "224"
+    uid: 580bbbd4-ae3f-4fe1-a6fc-ba295534355c
+  rules:
+  - apiGroups:
+    - ""
+    resourceNames:
+    - extension-apiserver-authentication
+    resources:
+    - configmaps
+    verbs:
+    - get
+    - list
+    - watch
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    annotations:
+      rbac.authorization.kubernetes.io/autoupdate: "true"
+    creationTimestamp: "2025-11-23T03:14:48Z"
+    labels:
+      kubernetes.io/bootstrapping: rbac-defaults
+    name: system::leader-locking-kube-controller-manager
+    namespace: kube-system
+    resourceVersion: "233"
+    uid: b7398ffc-4cc4-4a35-bcfa-84e66800ed7c
+  rules:
+  - apiGroups:
+    - ""
+    resources:
+    - configmaps
+    verbs:
+    - watch
+  - apiGroups:
+    - ""
+    resourceNames:
+    - kube-controller-manager
+    resources:
+    - configmaps
+    verbs:
+    - get
+    - update
+  - apiGroups:
+    - coordination.k8s.io
+    resources:
+    - leases
+    verbs:
+    - create
+    - get
+    - list
+    - update
+    - watch
+  - apiGroups:
+    - coordination.k8s.io
+    resources:
+    - leasecandidates
+    verbs:
+    - create
+    - get
+    - list
+    - update
+    - watch
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    annotations:
+      rbac.authorization.kubernetes.io/autoupdate: "true"
+    creationTimestamp: "2025-11-23T03:14:48Z"
+    labels:
+      kubernetes.io/bootstrapping: rbac-defaults
+    name: system::leader-locking-kube-scheduler
+    namespace: kube-system
+    resourceVersion: "235"
+    uid: fcadcd58-588e-4242-b0ad-8aa1ae56dfb0
+  rules:
+  - apiGroups:
+    - ""
+    resources:
+    - configmaps
+    verbs:
+    - watch
+  - apiGroups:
+    - ""
+    resourceNames:
+    - kube-scheduler
+    resources:
+    - configmaps
+    verbs:
+    - get
+    - update
+  - apiGroups:
+    - coordination.k8s.io
+    resources:
+    - leases
+    verbs:
+    - create
+    - get
+    - list
+    - update
+    - watch
+  - apiGroups:
+    - coordination.k8s.io
+    resources:
+    - leasecandidates
+    verbs:
+    - create
+    - get
+    - list
+    - update
+    - watch
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    annotations:
+      rbac.authorization.kubernetes.io/autoupdate: "true"
+    creationTimestamp: "2025-11-23T03:14:48Z"
+    labels:
+      kubernetes.io/bootstrapping: rbac-defaults
+    name: system:controller:bootstrap-signer
+    namespace: kube-system
+    resourceVersion: "226"
+    uid: 522c14f0-6cc1-4c3d-8641-ad7ae95b61f3
+  rules:
+  - apiGroups:
+    - ""
+    resources:
+    - secrets
+    verbs:
+    - get
+    - list
+    - watch
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    annotations:
+      rbac.authorization.kubernetes.io/autoupdate: "true"
+    creationTimestamp: "2025-11-23T03:14:48Z"
+    labels:
+      kubernetes.io/bootstrapping: rbac-defaults
+    name: system:controller:cloud-provider
+    namespace: kube-system
+    resourceVersion: "229"
+    uid: eab83132-5ade-49d7-89a3-967dd199db7a
+  rules:
+  - apiGroups:
+    - ""
+    resources:
+    - configmaps
+    verbs:
+    - create
+    - get
+    - list
+    - watch
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    annotations:
+      rbac.authorization.kubernetes.io/autoupdate: "true"
+    creationTimestamp: "2025-11-23T03:14:48Z"
+    labels:
+      kubernetes.io/bootstrapping: rbac-defaults
+    name: system:controller:token-cleaner
+    namespace: kube-system
+    resourceVersion: "231"
+    uid: 2972b7bc-4274-4895-af66-cc9d535c4e77
+  rules:
+  - apiGroups:
+    - ""
+    resources:
+    - secrets
+    verbs:
+    - delete
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - ""
+    - events.k8s.io
+    resources:
+    - events
+    verbs:
+    - create
+    - patch
+    - update
+kind: List
+metadata:
+  resourceVersion: ""

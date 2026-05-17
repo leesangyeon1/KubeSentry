@@ -1,0 +1,120 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: tetragon
+      meta.helm.sh/release-namespace: kubesentry
+    creationTimestamp: "2025-11-23T17:05:51Z"
+    labels:
+      app.kubernetes.io/component: agent
+      app.kubernetes.io/instance: tetragon
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: tetragon
+      app.kubernetes.io/part-of: tetragon
+      app.kubernetes.io/version: 1.6.0
+      helm.sh/chart: tetragon-1.6.0
+    name: tetragon
+    namespace: kubesentry
+    resourceVersion: "132007"
+    uid: 0256f044-9449-490b-a81b-99d1eae55433
+  spec:
+    clusterIP: 10.96.162.124
+    clusterIPs:
+    - 10.96.162.124
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: metrics
+      port: 2112
+      protocol: TCP
+      targetPort: 2112
+    selector:
+      app.kubernetes.io/component: agent
+      app.kubernetes.io/instance: tetragon
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: tetragon
+      app.kubernetes.io/part-of: tetragon
+      app.kubernetes.io/version: 1.6.0
+      helm.sh/chart: tetragon-1.6.0
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app.kubernetes.io/name":"tetragon"},"name":"tetragon-metrics","namespace":"kubesentry"},"spec":{"ports":[{"name":"metrics","port":2112,"protocol":"TCP","targetPort":2112}],"selector":{"app.kubernetes.io/name":"tetragon"},"type":"ClusterIP"}}
+    creationTimestamp: "2025-11-24T19:55:44Z"
+    labels:
+      app.kubernetes.io/name: tetragon
+    name: tetragon-metrics
+    namespace: kubesentry
+    resourceVersion: "388049"
+    uid: e978c46e-94ab-4e25-85e9-ab32dc4d369a
+  spec:
+    clusterIP: 10.107.36.173
+    clusterIPs:
+    - 10.107.36.173
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: metrics
+      port: 2112
+      protocol: TCP
+      targetPort: 2112
+    selector:
+      app.kubernetes.io/name: tetragon
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: tetragon
+      meta.helm.sh/release-namespace: kubesentry
+    creationTimestamp: "2025-11-23T17:05:51Z"
+    labels:
+      app.kubernetes.io/component: operator
+      app.kubernetes.io/instance: tetragon
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: tetragon-operator
+      app.kubernetes.io/part-of: tetragon
+      app.kubernetes.io/version: 1.6.0
+      helm.sh/chart: tetragon-1.6.0
+    name: tetragon-operator-metrics
+    namespace: kubesentry
+    resourceVersion: "132009"
+    uid: c6498b1d-7298-421f-8a1c-4eb21a439ea5
+  spec:
+    clusterIP: 10.110.232.162
+    clusterIPs:
+    - 10.110.232.162
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: metrics
+      port: 2113
+      protocol: TCP
+      targetPort: 2113
+    selector:
+      app.kubernetes.io/instance: tetragon
+      app.kubernetes.io/name: tetragon-operator
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+kind: List
+metadata:
+  resourceVersion: ""

@@ -1,0 +1,118 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: loki-stack
+      meta.helm.sh/release-namespace: loki
+    creationTimestamp: "2025-11-24T22:36:11Z"
+    labels:
+      app: loki
+      app.kubernetes.io/managed-by: Helm
+      chart: loki-2.16.0
+      heritage: Helm
+      release: loki-stack
+    name: loki-stack
+    namespace: loki
+    resourceVersion: "413703"
+    uid: 72170f9f-ff8b-4fcd-836f-f4d4355508fa
+  spec:
+    clusterIP: 10.104.165.244
+    clusterIPs:
+    - 10.104.165.244
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http-metrics
+      port: 3100
+      protocol: TCP
+      targetPort: http-metrics
+    selector:
+      app: loki
+      release: loki-stack
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: loki-stack
+      meta.helm.sh/release-namespace: loki
+    creationTimestamp: "2025-11-24T22:36:11Z"
+    labels:
+      app: loki
+      app.kubernetes.io/managed-by: Helm
+      chart: loki-2.16.0
+      heritage: Helm
+      release: loki-stack
+      variant: headless
+    name: loki-stack-headless
+    namespace: loki
+    resourceVersion: "413698"
+    uid: 985a3a1c-706a-46d3-bcf2-a2765b548a19
+  spec:
+    clusterIP: None
+    clusterIPs:
+    - None
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http-metrics
+      port: 3100
+      protocol: TCP
+      targetPort: http-metrics
+    selector:
+      app: loki
+      release: loki-stack
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: loki-stack
+      meta.helm.sh/release-namespace: loki
+    creationTimestamp: "2025-11-24T22:36:11Z"
+    labels:
+      app: loki
+      app.kubernetes.io/managed-by: Helm
+      chart: loki-2.16.0
+      heritage: Helm
+      release: loki-stack
+    name: loki-stack-memberlist
+    namespace: loki
+    resourceVersion: "413699"
+    uid: 1d3422e0-54e5-4dc6-87dc-54a6684f1fa1
+  spec:
+    clusterIP: None
+    clusterIPs:
+    - None
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http
+      port: 7946
+      protocol: TCP
+      targetPort: memberlist-port
+    publishNotReadyAddresses: true
+    selector:
+      app: loki
+      release: loki-stack
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+kind: List
+metadata:
+  resourceVersion: ""

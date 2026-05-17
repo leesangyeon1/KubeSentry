@@ -1,0 +1,287 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      prometheus.io/port: "9153"
+      prometheus.io/scrape: "true"
+    creationTimestamp: "2025-11-23T03:15:09Z"
+    labels:
+      app.kubernetes.io/name: coredns
+      k8s-app: kube-dns
+      kubernetes.io/cluster-service: "true"
+      kubernetes.io/name: CoreDNS
+    name: kube-dns
+    namespace: kube-system
+    resourceVersion: "590"
+    uid: 6705abc7-3ebe-4469-a189-f843aaf131e1
+  spec:
+    clusterIP: 10.96.0.10
+    clusterIPs:
+    - 10.96.0.10
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: dns
+      port: 53
+      protocol: UDP
+      targetPort: 53
+    - name: dns-tcp
+      port: 53
+      protocol: TCP
+      targetPort: 53
+    - name: metrics
+      port: 9153
+      protocol: TCP
+      targetPort: 9153
+    selector:
+      app.kubernetes.io/name: coredns
+      k8s-app: kube-dns
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-23T19:17:42Z"
+    labels:
+      app: kube-prometheus-stack-coredns
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/part-of: kube-prometheus-stack
+      app.kubernetes.io/version: 79.7.1
+      chart: kube-prometheus-stack-79.7.1
+      heritage: Helm
+      jobLabel: coredns
+      release: prometheus
+    name: prometheus-kube-prometheus-coredns
+    namespace: kube-system
+    resourceVersion: "154560"
+    uid: e29d7a28-8665-4ddc-947c-4731257a1b39
+  spec:
+    clusterIP: None
+    clusterIPs:
+    - None
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http-metrics
+      port: 9153
+      protocol: TCP
+      targetPort: 9153
+    selector:
+      k8s-app: kube-dns
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-23T19:17:42Z"
+    labels:
+      app: kube-prometheus-stack-kube-controller-manager
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/part-of: kube-prometheus-stack
+      app.kubernetes.io/version: 79.7.1
+      chart: kube-prometheus-stack-79.7.1
+      heritage: Helm
+      jobLabel: kube-controller-manager
+      release: prometheus
+    name: prometheus-kube-prometheus-kube-controller-manager
+    namespace: kube-system
+    resourceVersion: "154562"
+    uid: 6b7a418c-b78e-4a2f-813d-8ee302e2253d
+  spec:
+    clusterIP: None
+    clusterIPs:
+    - None
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http-metrics
+      port: 10257
+      protocol: TCP
+      targetPort: 10257
+    selector:
+      component: kube-controller-manager
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-23T19:17:42Z"
+    labels:
+      app: kube-prometheus-stack-kube-etcd
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/part-of: kube-prometheus-stack
+      app.kubernetes.io/version: 79.7.1
+      chart: kube-prometheus-stack-79.7.1
+      heritage: Helm
+      jobLabel: kube-etcd
+      release: prometheus
+    name: prometheus-kube-prometheus-kube-etcd
+    namespace: kube-system
+    resourceVersion: "154561"
+    uid: 51a4a31d-9739-48ab-9ee6-b2a42abd9801
+  spec:
+    clusterIP: None
+    clusterIPs:
+    - None
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http-metrics
+      port: 2381
+      protocol: TCP
+      targetPort: 2381
+    selector:
+      component: etcd
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-23T19:17:42Z"
+    labels:
+      app: kube-prometheus-stack-kube-proxy
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/part-of: kube-prometheus-stack
+      app.kubernetes.io/version: 79.7.1
+      chart: kube-prometheus-stack-79.7.1
+      heritage: Helm
+      jobLabel: kube-proxy
+      release: prometheus
+    name: prometheus-kube-prometheus-kube-proxy
+    namespace: kube-system
+    resourceVersion: "154559"
+    uid: addacef5-25f2-40b6-a8f3-0020398b4e69
+  spec:
+    clusterIP: None
+    clusterIPs:
+    - None
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http-metrics
+      port: 10249
+      protocol: TCP
+      targetPort: 10249
+    selector:
+      k8s-app: kube-proxy
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: prometheus
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2025-11-23T19:17:42Z"
+    labels:
+      app: kube-prometheus-stack-kube-scheduler
+      app.kubernetes.io/instance: prometheus
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/part-of: kube-prometheus-stack
+      app.kubernetes.io/version: 79.7.1
+      chart: kube-prometheus-stack-79.7.1
+      heritage: Helm
+      jobLabel: kube-scheduler
+      release: prometheus
+    name: prometheus-kube-prometheus-kube-scheduler
+    namespace: kube-system
+    resourceVersion: "154558"
+    uid: 1dd59b24-18f1-49bd-b4f7-1f822b352b02
+  spec:
+    clusterIP: None
+    clusterIPs:
+    - None
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http-metrics
+      port: 10259
+      protocol: TCP
+      targetPort: 10259
+    selector:
+      component: kube-scheduler
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: "2025-11-23T19:17:46Z"
+    labels:
+      app.kubernetes.io/managed-by: prometheus-operator
+      app.kubernetes.io/name: kubelet
+      k8s-app: kubelet
+    name: prometheus-kube-prometheus-kubelet
+    namespace: kube-system
+    resourceVersion: "154762"
+    uid: b374d500-840a-41e6-951d-33a7340bf162
+  spec:
+    clusterIP: None
+    clusterIPs:
+    - None
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    - IPv6
+    ipFamilyPolicy: RequireDualStack
+    ports:
+    - name: https-metrics
+      port: 10250
+      protocol: TCP
+      targetPort: 10250
+    - name: http-metrics
+      port: 10255
+      protocol: TCP
+      targetPort: 10255
+    - name: cadvisor
+      port: 4194
+      protocol: TCP
+      targetPort: 4194
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+kind: List
+metadata:
+  resourceVersion: ""

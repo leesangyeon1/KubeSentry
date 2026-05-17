@@ -1,0 +1,129 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  data:
+    kong.yml: |
+      _format_version: "3.0"
+      services:
+        - name: auth
+          host: kubernetes-dashboard-auth
+          port: 8000
+          protocol: http
+          routes:
+            - name: authLogin
+              paths:
+                - /api/v1/login
+              strip_path: false
+            - name: authCsrf
+              paths:
+                - /api/v1/csrftoken/login
+              strip_path: false
+            - name: authMe
+              paths:
+                - /api/v1/me
+              strip_path: false
+        - name: api
+          host: kubernetes-dashboard-api
+          port: 8000
+          protocol: http
+          routes:
+            - name: api
+              paths:
+                - /api
+              strip_path: false
+            - name: metrics
+              paths:
+                - /metrics
+              strip_path: false
+        - name: web
+          host: kubernetes-dashboard-web
+          port: 8000
+          protocol: http
+          routes:
+            - name: root
+              paths:
+                - /
+              strip_path: false
+  kind: ConfigMap
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: kubernetes-dashboard
+      meta.helm.sh/release-namespace: kubernetes-dashboard
+    creationTimestamp: "2025-11-23T03:57:15Z"
+    labels:
+      app.kubernetes.io/instance: kubernetes-dashboard
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/part-of: kubernetes-dashboard
+      helm.sh/chart: kubernetes-dashboard-7.14.0
+    name: kong-dbless-config
+    namespace: kubernetes-dashboard
+    resourceVersion: "25790"
+    uid: 77dfa69d-6ff2-4d89-80ab-4f7b1890bbc2
+- apiVersion: v1
+  data:
+    ca.crt: |
+      -----BEGIN CERTIFICATE-----
+      MIIDijCCAnKgAwIBAgIRALRtj79TNjFFx0YagrMa3zowDQYJKoZIhvcNAQELBQAw
+      TzELMAkGA1UEBhMCVVMxFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xEzARBgNVBAoT
+      Ckt1YmVybmV0ZXMxEzARBgNVBAMTCkt1YmVybmV0ZXMwHhcNMjUxMTIzMDMxNDAy
+      WhcNMzAxMTIzMDMxNDAyWjBPMQswCQYDVQQGEwJVUzEWMBQGA1UEBxMNU2FuIEZy
+      YW5jaXNjbzETMBEGA1UEChMKS3ViZXJuZXRlczETMBEGA1UEAxMKS3ViZXJuZXRl
+      czCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKJsj6eW6VALs2GrfbVC
+      La8sICp62CahYNC8oruHQi97RUi/zFj7g7FzAGYCqUlGcBvrYNpeVx4VeK2pqkiC
+      bPSikUlRJZJRy5+fwGXKYnESNJ94PofH51/C0+7RBlPWYYFZJ+G3/aHv0/tFynOW
+      aOxG9wuCDx+UbWuVHQC/z7ZrTRmdMGTIsCrKFmju7wYJvXF7tQ8h+Y6sOLa73Pcu
+      Inj69rpag8d0dVUvJCXVwV7ZHAiJWswhW2xjUG44e5k8rrArf2PJ6VHCtVMuk7y7
+      A4O/H4hrUQRwhzqH3BBpAdo62cU3x60Xnq1NgZcv9bc3C3jKVEXuUmwzWD3Y8QMN
+      iAkCAwEAAaNhMF8wDgYDVR0PAQH/BAQDAgKEMB0GA1UdJQQWMBQGCCsGAQUFBwMC
+      BggrBgEFBQcDATAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBSnCTgjU/yRNEPe
+      F4MmjTLw+iBCMDANBgkqhkiG9w0BAQsFAAOCAQEAYYpo9YW879yXtCISayqOmZof
+      xTkRsyVG6DwkV0omA7usC6gYgdUKDc8WDnYfvxqHZEKjcYRoZdmzrCqJ7TSNotzM
+      qwOlP6s/SCdkD6qBb/GyvLg5aMju1h3MG2/OwaO7+hfTd+rNVS1UVaXX20MjlR0o
+      Wv0XehMYQ00YF1R+61O1dDgigoYaPsK4ecjFc23F407WCo7V5VJkewx1Je7CcDnH
+      eiaAoB8bd0pPXhzZbB+7FPtRu687r0zdz+vJuumyH61Cf9v0h6fDmO0B2SEJ3e+c
+      8QK8NvykPS36Pbsc9tJYm51VF2N9ZvODSejotouVFw8SAUE7p4t2t5jHCcFWLw==
+      -----END CERTIFICATE-----
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubernetes.io/description: Contains a CA bundle that can be used to verify the
+        kube-apiserver when using internal endpoints such as the internal service
+        IP or kubernetes.default.svc. No other usage is guaranteed across distributions
+        of Kubernetes clusters.
+    creationTimestamp: "2025-11-23T03:57:14Z"
+    name: kube-root-ca.crt
+    namespace: kubernetes-dashboard
+    resourceVersion: "7760"
+    uid: 72bdb779-f83b-4373-98f3-05397dc17780
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"ConfigMap","metadata":{"annotations":{},"labels":{"k8s-app":"kubernetes-dashboard"},"name":"kubernetes-dashboard-settings","namespace":"kubernetes-dashboard"}}
+    creationTimestamp: "2025-11-23T05:49:02Z"
+    labels:
+      k8s-app: kubernetes-dashboard
+    name: kubernetes-dashboard-settings
+    namespace: kubernetes-dashboard
+    resourceVersion: "25561"
+    uid: d4832043-a4f6-47da-9a31-17a1f74881f8
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: kubernetes-dashboard
+      meta.helm.sh/release-namespace: kubernetes-dashboard
+    creationTimestamp: "2025-11-23T03:57:15Z"
+    labels:
+      app.kubernetes.io/instance: kubernetes-dashboard
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/part-of: kubernetes-dashboard
+      helm.sh/chart: kubernetes-dashboard-7.14.0
+    name: kubernetes-dashboard-web-settings
+    namespace: kubernetes-dashboard
+    resourceVersion: "25791"
+    uid: 9324f8e7-63be-4a3d-92bc-a661477410ff
+kind: List
+metadata:
+  resourceVersion: ""

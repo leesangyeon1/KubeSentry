@@ -1,0 +1,654 @@
+apiVersion: v1
+items:
+- apiVersion: apps/v1
+  kind: DaemonSet
+  metadata:
+    annotations:
+      deprecated.daemonset.template.generation: "1"
+    creationTimestamp: "2025-11-23T03:15:03Z"
+    generation: 1
+    labels:
+      k8s-app: calico-node
+    name: calico-node
+    namespace: kube-system
+    resourceVersion: "1771818"
+    uid: 9994588a-051d-432b-b432-69a0701eaed6
+  spec:
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        k8s-app: calico-node
+    template:
+      metadata:
+        labels:
+          k8s-app: calico-node
+      spec:
+        containers:
+        - env:
+          - name: DATASTORE_TYPE
+            value: kubernetes
+          - name: WAIT_FOR_DATASTORE
+            value: "true"
+          - name: NODENAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: spec.nodeName
+          - name: CALICO_NETWORKING_BACKEND
+            valueFrom:
+              configMapKeyRef:
+                key: calico_backend
+                name: calico-config
+          - name: CLUSTER_TYPE
+            value: k8s,bgp
+          - name: IP
+            value: autodetect
+          - name: IP6
+            value: autodetect
+          - name: IP_AUTODETECTION_METHOD
+            value: kubernetes-internal-ip
+          - name: CALICO_IPV4POOL_IPIP
+            value: Never
+          - name: CALICO_IPV4POOL_VXLAN
+            value: Never
+          - name: CALICO_IPV6POOL_VXLAN
+            value: Never
+          - name: FELIX_IPINIPMTU
+            valueFrom:
+              configMapKeyRef:
+                key: veth_mtu
+                name: calico-config
+          - name: FELIX_VXLANMTU
+            valueFrom:
+              configMapKeyRef:
+                key: veth_mtu
+                name: calico-config
+          - name: FELIX_WIREGUARDMTU
+            valueFrom:
+              configMapKeyRef:
+                key: veth_mtu
+                name: calico-config
+          - name: CALICO_IPV4POOL_CIDR
+            value: 10.244.0.0/16
+          - name: CALICO_IPV6POOL_CIDR
+            value: fd10:1ba:6d2c:1000:0:0:0:0/64
+          - name: CALICO_DISABLE_FILE_LOGGING
+            value: "true"
+          - name: FELIX_DEFAULTENDPOINTTOHOSTACTION
+            value: ACCEPT
+          - name: FELIX_IPV6SUPPORT
+            value: "true"
+          - name: FELIX_HEALTHENABLED
+            value: "true"
+          - name: FELIX_WORKLOADSOURCESPOOFING
+            value: Any
+          envFrom:
+          - configMapRef:
+              name: kubernetes-services-endpoint
+              optional: true
+          image: sjc.vultrcr.com/docker.io/calico/node:v3.30.3
+          imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                - /bin/calico-node
+                - -shutdown
+          livenessProbe:
+            exec:
+              command:
+              - /bin/calico-node
+              - -felix-live
+              - -bird-live
+            failureThreshold: 6
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 10
+          name: calico-node
+          readinessProbe:
+            exec:
+              command:
+              - /bin/calico-node
+              - -felix-ready
+              - -bird-ready
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 10
+          resources:
+            requests:
+              cpu: 250m
+          securityContext:
+            privileged: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /host/etc/cni/net.d
+            name: cni-net-dir
+          - mountPath: /lib/modules
+            name: lib-modules
+            readOnly: true
+          - mountPath: /run/xtables.lock
+            name: xtables-lock
+          - mountPath: /var/run/calico
+            name: var-run-calico
+          - mountPath: /var/lib/calico
+            name: var-lib-calico
+          - mountPath: /var/run/nodeagent
+            name: policysync
+          - mountPath: /sys/fs/bpf
+            name: bpffs
+          - mountPath: /var/log/calico/cni
+            name: cni-log-dir
+            readOnly: true
+        dnsPolicy: ClusterFirst
+        hostNetwork: true
+        initContainers:
+        - command:
+          - /opt/cni/bin/calico-ipam
+          - -upgrade
+          env:
+          - name: KUBERNETES_NODE_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: spec.nodeName
+          - name: CALICO_NETWORKING_BACKEND
+            valueFrom:
+              configMapKeyRef:
+                key: calico_backend
+                name: calico-config
+          envFrom:
+          - configMapRef:
+              name: kubernetes-services-endpoint
+              optional: true
+          image: sjc.vultrcr.com/docker.io/calico/cni:v3.30.3
+          imagePullPolicy: IfNotPresent
+          name: upgrade-ipam
+          resources: {}
+          securityContext:
+            privileged: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /var/lib/cni/networks
+            name: host-local-net-dir
+          - mountPath: /host/opt/cni/bin
+            name: cni-bin-dir
+        - command:
+          - /opt/cni/bin/install
+          env:
+          - name: CNI_CONF_NAME
+            value: 10-calico.conflist
+          - name: CNI_NETWORK_CONFIG
+            valueFrom:
+              configMapKeyRef:
+                key: cni_network_config
+                name: calico-config
+          - name: KUBERNETES_NODE_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: spec.nodeName
+          - name: CNI_MTU
+            valueFrom:
+              configMapKeyRef:
+                key: veth_mtu
+                name: calico-config
+          - name: SLEEP
+            value: "false"
+          envFrom:
+          - configMapRef:
+              name: kubernetes-services-endpoint
+              optional: true
+          image: sjc.vultrcr.com/docker.io/calico/cni:v3.30.3
+          imagePullPolicy: IfNotPresent
+          name: install-cni
+          resources: {}
+          securityContext:
+            privileged: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /host/opt/cni/bin
+            name: cni-bin-dir
+          - mountPath: /host/etc/cni/net.d
+            name: cni-net-dir
+        - command:
+          - calico-node
+          - -init
+          - -best-effort
+          image: sjc.vultrcr.com/docker.io/calico/node:v3.30.3
+          imagePullPolicy: IfNotPresent
+          name: mount-bpffs
+          resources: {}
+          securityContext:
+            privileged: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /sys/fs
+            mountPropagation: Bidirectional
+            name: sys-fs
+          - mountPath: /var/run/calico
+            mountPropagation: Bidirectional
+            name: var-run-calico
+          - mountPath: /nodeproc
+            name: nodeproc
+            readOnly: true
+        nodeSelector:
+          kubernetes.io/os: linux
+        priorityClassName: system-node-critical
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          seccompProfile:
+            type: RuntimeDefault
+        serviceAccount: calico-node
+        serviceAccountName: calico-node
+        terminationGracePeriodSeconds: 0
+        tolerations:
+        - effect: NoSchedule
+          operator: Exists
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
+        volumes:
+        - hostPath:
+            path: /lib/modules
+            type: ""
+          name: lib-modules
+        - hostPath:
+            path: /var/run/calico
+            type: DirectoryOrCreate
+          name: var-run-calico
+        - hostPath:
+            path: /var/lib/calico
+            type: DirectoryOrCreate
+          name: var-lib-calico
+        - hostPath:
+            path: /run/xtables.lock
+            type: FileOrCreate
+          name: xtables-lock
+        - hostPath:
+            path: /sys/fs/
+            type: DirectoryOrCreate
+          name: sys-fs
+        - hostPath:
+            path: /sys/fs/bpf
+            type: Directory
+          name: bpffs
+        - hostPath:
+            path: /proc
+            type: ""
+          name: nodeproc
+        - hostPath:
+            path: /opt/cni/bin
+            type: DirectoryOrCreate
+          name: cni-bin-dir
+        - hostPath:
+            path: /etc/cni/net.d
+            type: ""
+          name: cni-net-dir
+        - hostPath:
+            path: /var/log/calico/cni
+            type: ""
+          name: cni-log-dir
+        - hostPath:
+            path: /var/lib/cni/networks
+            type: ""
+          name: host-local-net-dir
+        - hostPath:
+            path: /var/run/nodeagent
+            type: DirectoryOrCreate
+          name: policysync
+    updateStrategy:
+      rollingUpdate:
+        maxSurge: 0
+        maxUnavailable: 1
+      type: RollingUpdate
+  status:
+    currentNumberScheduled: 4
+    desiredNumberScheduled: 4
+    numberAvailable: 4
+    numberMisscheduled: 0
+    numberReady: 4
+    observedGeneration: 1
+    updatedNumberScheduled: 4
+- apiVersion: apps/v1
+  kind: DaemonSet
+  metadata:
+    annotations:
+      deprecated.daemonset.template.generation: "1"
+    creationTimestamp: "2025-11-23T03:15:13Z"
+    generation: 1
+    name: csi-vultr-node
+    namespace: kube-system
+    resourceVersion: "1004"
+    uid: 31eb989c-0890-4d4d-b386-42b1ceaba8e2
+  spec:
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: csi-vultr-node
+    template:
+      metadata:
+        labels:
+          app: csi-vultr-node
+          role: csi-vultr
+      spec:
+        containers:
+        - args:
+          - --v=5
+          - --csi-address=$(ADDRESS)
+          - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+          env:
+          - name: ADDRESS
+            value: /csi/csi.sock
+          - name: DRIVER_REG_SOCK_PATH
+            value: /var/lib/kubelet/plugins/block.csi.vultr.com/csi.sock
+          - name: KUBE_NODE_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: spec.nodeName
+          image: registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.7.0
+          imagePullPolicy: IfNotPresent
+          name: driver-registrar
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /csi/
+            name: plugin-dir
+          - mountPath: /registration/
+            name: registration-dir
+        - args:
+          - --endpoint=$(CSI_ENDPOINT)
+          - --user-agent=vke-csi:fd411245-2847-4e76-8e31-487a9d323b26
+          env:
+          - name: CSI_ENDPOINT
+            value: unix:///csi/csi.sock
+          image: vultr/vultr-csi:v0.17.1
+          imagePullPolicy: Always
+          name: csi-vultr-plugin
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: true
+            capabilities:
+              add:
+              - SYS_ADMIN
+            privileged: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /csi
+            name: plugin-dir
+          - mountPath: /var/lib/kubelet
+            mountPropagation: Bidirectional
+            name: pods-mount-dir
+          - mountPath: /dev
+            name: device-dir
+        dnsPolicy: ClusterFirst
+        hostNetwork: true
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        serviceAccount: csi-vultr-node-sa
+        serviceAccountName: csi-vultr-node-sa
+        terminationGracePeriodSeconds: 30
+        tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
+        - effect: NoSchedule
+          operator: Exists
+        volumes:
+        - hostPath:
+            path: /var/lib/kubelet/plugins_registry/
+            type: DirectoryOrCreate
+          name: registration-dir
+        - hostPath:
+            path: /var/lib/kubelet
+            type: Directory
+          name: kubelet-dir
+        - hostPath:
+            path: /var/lib/kubelet/plugins/block.csi.vultr.com
+            type: DirectoryOrCreate
+          name: plugin-dir
+        - hostPath:
+            path: /var/lib/kubelet
+            type: Directory
+          name: pods-mount-dir
+        - hostPath:
+            path: /dev
+            type: ""
+          name: device-dir
+        - hostPath:
+            path: /etc/udev
+            type: Directory
+          name: udev-rules-etc
+        - hostPath:
+            path: /lib/udev
+            type: Directory
+          name: udev-rules-lib
+        - hostPath:
+            path: /run/udev
+            type: Directory
+          name: udev-socket
+        - hostPath:
+            path: /sys
+            type: Directory
+          name: sys
+    updateStrategy:
+      rollingUpdate:
+        maxSurge: 0
+        maxUnavailable: 1
+      type: RollingUpdate
+  status:
+    currentNumberScheduled: 4
+    desiredNumberScheduled: 4
+    numberAvailable: 4
+    numberMisscheduled: 0
+    numberReady: 4
+    observedGeneration: 1
+    updatedNumberScheduled: 4
+- apiVersion: apps/v1
+  kind: DaemonSet
+  metadata:
+    annotations:
+      deprecated.daemonset.template.generation: "1"
+    creationTimestamp: "2025-11-23T03:15:10Z"
+    generation: 1
+    labels:
+      addonmanager.kubernetes.io/mode: Reconcile
+      k8s-app: konnectivity-agent
+    name: konnectivity-agent
+    namespace: kube-system
+    resourceVersion: "1175"
+    uid: c7586171-3067-4b0d-8f5e-3fe01424655c
+  spec:
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        k8s-app: konnectivity-agent
+    template:
+      metadata:
+        labels:
+          k8s-app: konnectivity-agent
+      spec:
+        containers:
+        - args:
+          - --logtostderr=true
+          - --ca-cert=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          - --proxy-server-host=10.3.96.3
+          - --proxy-server-port=8132
+          - --health-server-port=8134
+          - --service-account-token-path=/var/run/secrets/tokens/konnectivity-agent-token
+          command:
+          - /proxy-agent
+          image: us.gcr.io/k8s-artifacts-prod/kas-network-proxy/proxy-agent:v0.0.37
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 8134
+              scheme: HTTP
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 15
+          name: konnectivity-agent
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /var/run/secrets/tokens
+            name: konnectivity-agent-token
+        dnsPolicy: ClusterFirst
+        priorityClassName: system-cluster-critical
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        serviceAccount: konnectivity-agent
+        serviceAccountName: konnectivity-agent
+        terminationGracePeriodSeconds: 30
+        tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
+        - effect: NoSchedule
+          operator: Exists
+        volumes:
+        - name: konnectivity-agent-token
+          projected:
+            defaultMode: 420
+            sources:
+            - serviceAccountToken:
+                audience: system:konnectivity-server
+                expirationSeconds: 3600
+                path: konnectivity-agent-token
+    updateStrategy:
+      rollingUpdate:
+        maxSurge: 0
+        maxUnavailable: 1
+      type: RollingUpdate
+  status:
+    currentNumberScheduled: 4
+    desiredNumberScheduled: 4
+    numberAvailable: 4
+    numberMisscheduled: 0
+    numberReady: 4
+    observedGeneration: 1
+    updatedNumberScheduled: 4
+- apiVersion: apps/v1
+  kind: DaemonSet
+  metadata:
+    annotations:
+      deprecated.daemonset.template.generation: "1"
+    creationTimestamp: "2025-11-23T03:15:15Z"
+    generation: 1
+    labels:
+      addonmanager.kubernetes.io/mode: Reconcile
+      k8s-app: kube-proxy
+    name: kube-proxy
+    namespace: kube-system
+    resourceVersion: "1059"
+    uid: 51a3353d-4824-40c1-a5c2-680cfcd23a5c
+  spec:
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        k8s-app: kube-proxy
+    template:
+      metadata:
+        labels:
+          k8s-app: kube-proxy
+      spec:
+        containers:
+        - command:
+          - /bin/sh
+          - -c
+          - kube-proxy --cluster-cidr=10.244.0.0/16,fd10:1ba:6d2c:1000:0:0:0:0/64
+            --kubeconfig=/var/lib/kube-proxy/kubeconfig --oom-score-adj=-998 1>>/var/log/kube-proxy.log
+            2>&1
+          env:
+          - name: KUBERNETES_SERVICE_HOST
+            value: 10.96.0.1
+          image: registry.k8s.io/kube-proxy:v1.34.1
+          imagePullPolicy: IfNotPresent
+          name: kube-proxy
+          resources:
+            requests:
+              cpu: 100m
+              memory: 50Mi
+          securityContext:
+            privileged: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /var/log
+            name: varlog
+          - mountPath: /var/lib/kube-proxy/kubeconfig
+            name: kubeconfig
+          - mountPath: /run/xtables.lock
+            name: xtables-lock
+          - mountPath: /lib/modules
+            name: lib-modules
+            readOnly: true
+        dnsPolicy: ClusterFirst
+        hostNetwork: true
+        nodeSelector:
+          kubernetes.io/os: linux
+          node.kubernetes.io/kube-proxy-ds-ready: "true"
+        priorityClassName: system-node-critical
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        serviceAccount: kube-proxy
+        serviceAccountName: kube-proxy
+        terminationGracePeriodSeconds: 30
+        tolerations:
+        - effect: NoExecute
+          operator: Exists
+        - effect: NoSchedule
+          operator: Exists
+        volumes:
+        - hostPath:
+            path: /var/log
+            type: ""
+          name: varlog
+        - hostPath:
+            path: /var/lib/kube-proxy/kubeconfig
+            type: FileOrCreate
+          name: kubeconfig
+        - hostPath:
+            path: /run/xtables.lock
+            type: FileOrCreate
+          name: xtables-lock
+        - hostPath:
+            path: /lib/modules
+            type: ""
+          name: lib-modules
+    updateStrategy:
+      rollingUpdate:
+        maxSurge: 0
+        maxUnavailable: 10%
+      type: RollingUpdate
+  status:
+    currentNumberScheduled: 4
+    desiredNumberScheduled: 4
+    numberAvailable: 4
+    numberMisscheduled: 0
+    numberReady: 4
+    observedGeneration: 1
+    updatedNumberScheduled: 4
+kind: List
+metadata:
+  resourceVersion: ""

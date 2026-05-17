@@ -1,0 +1,127 @@
+apiVersion: v1
+items:
+- apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    creationTimestamp: "2025-11-23T03:15:13Z"
+    generation: 1
+    name: csi-vultr-controller
+    namespace: kube-system
+    resourceVersion: "1236"
+    uid: 300fe0f6-ea35-4d80-8fa7-210fb58505e8
+  spec:
+    persistentVolumeClaimRetentionPolicy:
+      whenDeleted: Retain
+      whenScaled: Retain
+    podManagementPolicy: OrderedReady
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: csi-vultr-controller
+    serviceName: csi-vultr
+    template:
+      metadata:
+        labels:
+          app: csi-vultr-controller
+          role: csi-vultr
+      spec:
+        containers:
+        - args:
+          - --volume-name-prefix=pvc
+          - --volume-name-uuid-length=16
+          - --csi-address=$(ADDRESS)
+          - --v=5
+          - --default-fstype=ext4
+          env:
+          - name: ADDRESS
+            value: /var/lib/csi/sockets/pluginproxy/csi.sock
+          image: registry.k8s.io/sig-storage/csi-provisioner:v3.4.0
+          imagePullPolicy: Always
+          name: csi-provisioner
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /var/lib/csi/sockets/pluginproxy/
+            name: socket-dir
+        - args:
+          - --v=5
+          - --csi-address=$(ADDRESS)
+          env:
+          - name: ADDRESS
+            value: /var/lib/csi/sockets/pluginproxy/csi.sock
+          image: registry.k8s.io/sig-storage/csi-attacher:v4.1.0
+          imagePullPolicy: Always
+          name: csi-attacher
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /var/lib/csi/sockets/pluginproxy/
+            name: socket-dir
+        - args:
+          - --csi-address=$(ADDRESS)
+          - --timeout=30s
+          - --v=5
+          - --handle-volume-inuse-error=false
+          env:
+          - name: ADDRESS
+            value: /var/lib/csi/sockets/pluginproxy/csi.sock
+          image: registry.k8s.io/sig-storage/csi-resizer:v1.7.0
+          imagePullPolicy: IfNotPresent
+          name: csi-resizer
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /var/lib/csi/sockets/pluginproxy/
+            name: socket-dir
+        - args:
+          - --endpoint=$(CSI_ENDPOINT)
+          - --token=$(VULTR_API_KEY)
+          - --user-agent=vke-csi:fd411245-2847-4e76-8e31-487a9d323b26
+          env:
+          - name: CSI_ENDPOINT
+            value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
+          - name: VULTR_API_KEY
+            valueFrom:
+              secretKeyRef:
+                key: api-key
+                name: vultr-csi
+          image: vultr/vultr-csi:v0.17.1
+          imagePullPolicy: Always
+          name: csi-vultr-plugin
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /var/lib/csi/sockets/pluginproxy/
+            name: socket-dir
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        serviceAccount: csi-vultr-controller-sa
+        serviceAccountName: csi-vultr-controller-sa
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - emptyDir: {}
+          name: socket-dir
+    updateStrategy:
+      rollingUpdate:
+        partition: 0
+      type: RollingUpdate
+  status:
+    availableReplicas: 1
+    collisionCount: 0
+    currentReplicas: 1
+    currentRevision: csi-vultr-controller-5b7c4b7b75
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updateRevision: csi-vultr-controller-5b7c4b7b75
+    updatedReplicas: 1
+kind: List
+metadata:
+  resourceVersion: ""

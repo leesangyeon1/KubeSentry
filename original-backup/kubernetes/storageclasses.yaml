@@ -1,0 +1,61 @@
+apiVersion: v1
+items:
+- allowVolumeExpansion: true
+  apiVersion: storage.k8s.io/v1
+  kind: StorageClass
+  metadata:
+    annotations:
+      storageclass.kubernetes.io/is-default-class: "true"
+    creationTimestamp: "2025-11-23T03:15:13Z"
+    name: vultr-block-storage-hdd
+    resourceVersion: "737"
+    uid: f269fb55-f5a4-4517-8002-b0bb9a888255
+  parameters:
+    block_type: storage_opt
+  provisioner: block.csi.vultr.com
+  reclaimPolicy: Delete
+  volumeBindingMode: Immediate
+- allowVolumeExpansion: true
+  apiVersion: storage.k8s.io/v1
+  kind: StorageClass
+  metadata:
+    creationTimestamp: "2025-11-23T03:15:13Z"
+    name: vultr-block-storage-hdd-retain
+    resourceVersion: "671"
+    uid: ca21417f-4969-4e6b-912b-ca197307e890
+  parameters:
+    block_type: storage_opt
+  provisioner: block.csi.vultr.com
+  reclaimPolicy: Retain
+  volumeBindingMode: Immediate
+- allowVolumeExpansion: true
+  apiVersion: storage.k8s.io/v1
+  kind: StorageClass
+  metadata:
+    creationTimestamp: "2025-11-23T03:15:13Z"
+    name: vultr-vfs-storage
+    resourceVersion: "668"
+    uid: 1cdaa03a-c8af-4f20-9d7a-850125200d9f
+  parameters:
+    disk_type: nvme
+    storage_type: vfs
+  provisioner: block.csi.vultr.com
+  reclaimPolicy: Delete
+  volumeBindingMode: Immediate
+- allowVolumeExpansion: true
+  apiVersion: storage.k8s.io/v1
+  kind: StorageClass
+  metadata:
+    creationTimestamp: "2025-11-23T03:15:13Z"
+    name: vultr-vfs-storage-retain
+    resourceVersion: "669"
+    uid: c81afe2e-dab2-491c-8ba2-5aeb3b5e4bd9
+  parameters:
+    disk_type: nvme
+    storage_type: vfs
+  provisioner: block.csi.vultr.com
+  reclaimPolicy: Retain
+  volumeBindingMode: Immediate
+kind: List
+metadata:
+  resourceVersion: ""

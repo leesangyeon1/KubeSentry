@@ -1,0 +1,335 @@
+apiVersion: v1
+items:
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+    creationTimestamp: "2025-11-23T03:15:03Z"
+    generation: 1
+    labels:
+      k8s-app: calico-kube-controllers
+    name: calico-kube-controllers
+    namespace: kube-system
+    resourceVersion: "1771770"
+    uid: d799b24c-f825-45fb-be4c-d2ee323180ab
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        k8s-app: calico-kube-controllers
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          k8s-app: calico-kube-controllers
+        name: calico-kube-controllers
+        namespace: kube-system
+      spec:
+        containers:
+        - env:
+          - name: ENABLED_CONTROLLERS
+            value: node,loadbalancer
+          - name: DATASTORE_TYPE
+            value: kubernetes
+          image: sjc.vultrcr.com/docker.io/calico/kube-controllers:v3.30.3
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            exec:
+              command:
+              - /usr/bin/check-status
+              - -l
+            failureThreshold: 6
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 10
+          name: calico-kube-controllers
+          readinessProbe:
+            exec:
+              command:
+              - /usr/bin/check-status
+              - -r
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          securityContext:
+            runAsNonRoot: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        nodeSelector:
+          kubernetes.io/os: linux
+        priorityClassName: system-cluster-critical
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          seccompProfile:
+            type: RuntimeDefault
+        serviceAccount: calico-kube-controllers
+        serviceAccountName: calico-kube-controllers
+        terminationGracePeriodSeconds: 30
+        tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/control-plane
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2025-11-23T03:15:03Z"
+      lastUpdateTime: "2025-11-23T03:15:49Z"
+      message: ReplicaSet "calico-kube-controllers-65bc8f7575" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    - lastTransitionTime: "2025-11-30T22:32:02Z"
+      lastUpdateTime: "2025-11-30T22:32:02Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+    creationTimestamp: "2025-11-23T03:15:16Z"
+    generation: 1
+    labels:
+      app: cluster-autoscaler
+    name: cluster-autoscaler
+    namespace: kube-system
+    resourceVersion: "1081"
+    uid: 7755b36c-f63c-47e5-a86b-2b25caab114d
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: cluster-autoscaler
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        labels:
+          app: cluster-autoscaler
+      spec:
+        containers:
+        - command:
+          - ./cluster-autoscaler
+          - --v=2
+          - --cloud-provider=vultr
+          - --cloud-config=/config/cloud-config
+          image: registry.k8s.io/autoscaling/cluster-autoscaler:v1.34.1
+          imagePullPolicy: Always
+          name: cluster-autoscaler
+          resources:
+            limits:
+              cpu: 100m
+              memory: 300Mi
+            requests:
+              cpu: 100m
+              memory: 300Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /etc/ssl/certs/ca-certificates.crt
+            name: ssl-certs
+            readOnly: true
+          - mountPath: /config
+            name: cloud-config
+            readOnly: true
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        serviceAccount: cluster-autoscaler
+        serviceAccountName: cluster-autoscaler
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - hostPath:
+            path: /etc/ssl/certs/ca-certificates.crt
+            type: ""
+          name: ssl-certs
+        - name: cloud-config
+          secret:
+            defaultMode: 420
+            secretName: cluster-autoscaler-cloud-config
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2025-11-23T03:15:38Z"
+      lastUpdateTime: "2025-11-23T03:15:38Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    - lastTransitionTime: "2025-11-23T03:15:16Z"
+      lastUpdateTime: "2025-11-23T03:15:38Z"
+      message: ReplicaSet "cluster-autoscaler-594f8c878c" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+    creationTimestamp: "2025-11-23T03:15:09Z"
+    generation: 1
+    labels:
+      app.kubernetes.io/name: coredns
+      k8s-app: kube-dns
+      kubernetes.io/name: CoreDNS
+    name: coredns
+    namespace: kube-system
+    resourceVersion: "1771790"
+    uid: 830e43f1-483f-4180-8dce-afd4a04557be
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app.kubernetes.io/name: coredns
+        k8s-app: kube-dns
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 1
+      type: RollingUpdate
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/name: coredns
+          k8s-app: kube-dns
+      spec:
+        affinity:
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                - key: k8s-app
+                  operator: In
+                  values:
+                  - kube-dns
+              topologyKey: kubernetes.io/hostname
+        containers:
+        - args:
+          - -conf
+          - /etc/coredns/Corefile
+          image: coredns/coredns:1.11.1
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          name: coredns
+          ports:
+          - containerPort: 53
+            name: dns
+            protocol: UDP
+          - containerPort: 53
+            name: dns-tcp
+            protocol: TCP
+          - containerPort: 9153
+            name: metrics
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /ready
+              port: 8181
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            limits:
+              memory: 170Mi
+            requests:
+              cpu: 100m
+              memory: 70Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+              - NET_BIND_SERVICE
+              drop:
+              - all
+            readOnlyRootFilesystem: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /etc/coredns
+            name: config-volume
+            readOnly: true
+        dnsPolicy: Default
+        nodeSelector:
+          kubernetes.io/os: linux
+        priorityClassName: system-cluster-critical
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        serviceAccount: coredns
+        serviceAccountName: coredns
+        terminationGracePeriodSeconds: 30
+        tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        volumes:
+        - configMap:
+            defaultMode: 420
+            items:
+            - key: Corefile
+              path: Corefile
+            name: coredns
+          name: config-volume
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2025-11-23T03:15:09Z"
+      lastUpdateTime: "2025-11-23T03:15:09Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    - lastTransitionTime: "2025-11-23T03:15:09Z"
+      lastUpdateTime: "2025-11-23T03:15:42Z"
+      message: ReplicaSet "coredns-57f7c6cff7" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+kind: List
+metadata:
+  resourceVersion: ""
