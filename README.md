@@ -2,6 +2,20 @@
 
 **KubeSentry** is a security platform that leverages eBPF (Extended Berkeley Packet Filter) to detect, isolate, and visualize backdoor activities like BPFdoor in real-time within Kubernetes clusters.
 
+## Full Environment and Code Report
+
+A complete technical report based on the server backup in `/home/slee103/hackathon` is available at:
+
+- [`docs/HACKATHON_FULL_REPORT.md`](docs/HACKATHON_FULL_REPORT.md)
+
+The report covers:
+
+- Environment baseline (OS/kernel/runtime)
+- Kubernetes namespaces/resources and architecture
+- KubeSentry controller code behavior and isolation logic
+- Monitoring/logging stack (Tetragon, Prometheus, Loki, Grafana)
+- Security handling notes for secrets and backup publication
+
 **Requirements** 
 
 - Kubernetes cluster (v1.24+)
